@@ -113,6 +113,8 @@ export function EditorLayout() {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string>("No file open");
   const [isDraggingFile, setIsDraggingFile] = useState(false);
+  const [toolColor, setToolColor] = useState("#EF4444");
+  const [toolSize, setToolSize] = useState(3);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isPremium = false;
 
@@ -320,6 +322,8 @@ export function EditorLayout() {
                   page={editorState.currentPage}
                   zoom={editorState.zoom}
                   activeTool={editorState.activeTool}
+                  toolColor={toolColor}
+                  toolSize={toolSize}
                 />
               </div>
             ) : (
@@ -355,7 +359,13 @@ export function EditorLayout() {
 
           {editorState.activeTool ? (
             <div className="space-y-3">
-              <ToolOptions tool={editorState.activeTool} />
+              <ToolOptions
+                tool={editorState.activeTool}
+                color={toolColor}
+                size={toolSize}
+                onColorChange={setToolColor}
+                onSizeChange={setToolSize}
+              />
             </div>
           ) : (
             <p className="text-xs text-muted-foreground">
@@ -396,76 +406,135 @@ export function EditorLayout() {
 
 // ─── Contextual tool options ──────────────────────────────────────────────────
 
-function ToolOptions({ tool }: { tool: ToolAction }) {
-  const colorOptions = ["#000000", "#EF4444", "#3B82F6", "#22C55E", "#F59E0B", "#8B5CF6"];
-  const sizeOptions = [1, 2, 4, 6, 10];
+interface ToolOptionsProps {
+  tool: ToolAction;
+  color: string;
+  size: number;
+  onColorChange: (c: string) => void;
+  onSizeChange: (s: number) => void;
+}
 
-  if (tool === "add-text" || tool === "edit-text") {
-    return (
-      <>
-        <OptionRow label="Font size">
-          <select className="w-full rounded border bg-background px-2 py-1 text-xs">
-            {[8, 10, 12, 14, 16, 18, 24, 32].map((s) => (
-              <option key={s}>{s}px</option>
+function ToolOptions({ tool, color, size, onColorChange, onSizeChange }: ToolOptionsProps) {
+  const drawColors = ["#000000", "#EF4444", "#3B82F6", "#22C55E", "#F59E0B", "#8B5CF6", "#EC4899", "#FFFFFF"];
+  const highlightColors = ["#FDE047", "#86EFAC", "#93C5FD", "#F9A8D4", "#FCA5A5", "#C4B5FD"];
+  const sizes = [1, 2, 4, 6, 10, 16];
+
+  const isDrawTool = ["draw", "shapes", "sign", "annotate"].includes(tool);
+  const isHighlight = tool === "highlight";
+  const isText = ["add-text", "edit-text", "notes"].includes(tool);
+
+  return (
+    <div className="space-y-4">
+      {/* Color picker */}
+      {(isDrawTool || isHighlight || isText) && (
+        <div className="space-y-1.5">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Color</p>
+          <div className="flex flex-wrap gap-1.5">
+            {(isHighlight ? highlightColors : drawColors).map((c) => (
+              <button
+                key={c}
+                onClick={() => onColorChange(c)}
+                className={cn(
+                  "h-6 w-6 rounded-full border-2 transition-all hover:scale-110",
+                  color === c ? "scale-125 border-foreground shadow-sm" : "border-muted"
+                )}
+                style={{ backgroundColor: c }}
+                title={c}
+              />
             ))}
-          </select>
-        </OptionRow>
-        <OptionRow label="Color">
-          <ColorPicker colors={colorOptions} />
-        </OptionRow>
-        <OptionRow label="Bold">
-          <input type="checkbox" className="accent-primary" />
-        </OptionRow>
-      </>
-    );
-  }
+          </div>
+          <div className="flex items-center gap-2 mt-1">
+            <input
+              type="color"
+              value={color}
+              onChange={(e) => onColorChange(e.target.value)}
+              className="h-7 w-7 cursor-pointer rounded border"
+              title="Custom color"
+            />
+            <span className="text-xs text-muted-foreground font-mono">{color}</span>
+          </div>
+        </div>
+      )}
 
-  if (tool === "highlight") {
-    return (
-      <>
-        <OptionRow label="Color">
-          <ColorPicker colors={["#FDE047", "#86EFAC", "#93C5FD", "#F9A8D4", "#FCA5A5"]} />
-        </OptionRow>
-        <OptionRow label="Opacity">
-          <input type="range" min={20} max={100} defaultValue={50} className="w-full accent-primary" />
-        </OptionRow>
-      </>
-    );
-  }
-
-  if (tool === "draw") {
-    return (
-      <>
-        <OptionRow label="Color">
-          <ColorPicker colors={colorOptions} />
-        </OptionRow>
-        <OptionRow label="Brush size">
+      {/* Brush / stroke size */}
+      {isDrawTool && (
+        <div className="space-y-1.5">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Size — {size}px
+          </p>
+          <input
+            type="range"
+            min={1}
+            max={20}
+            value={size}
+            onChange={(e) => onSizeChange(Number(e.target.value))}
+            className="w-full accent-primary"
+          />
           <div className="flex gap-1">
-            {sizeOptions.map((s) => (
+            {sizes.map((s) => (
               <button
                 key={s}
-                className="flex h-6 w-6 items-center justify-center rounded border bg-background text-[10px] hover:bg-muted"
+                onClick={() => onSizeChange(s)}
+                className={cn(
+                  "flex h-6 w-6 items-center justify-center rounded border text-[10px] transition-colors",
+                  size === s ? "border-primary bg-primary text-primary-foreground" : "bg-background hover:bg-muted"
+                )}
               >
                 {s}
               </button>
             ))}
           </div>
-        </OptionRow>
-      </>
-    );
-  }
+        </div>
+      )}
 
-  if (tool === "sign") {
-    return (
-      <div className="rounded-lg border bg-muted/30 p-3 text-center">
-        <p className="text-xs text-muted-foreground">Draw or type your signature in the canvas area</p>
-      </div>
-    );
-  }
+      {/* Text tool hint */}
+      {isText && (
+        <div className="rounded-lg border bg-muted/30 p-2.5 text-xs text-muted-foreground">
+          Click anywhere on the PDF to place a text box. Press Escape or click away to confirm.
+        </div>
+      )}
 
-  return (
-    <div className="rounded-lg border bg-muted/30 p-3 text-xs text-muted-foreground">
-      <p>Load a PDF and click on the document to use this tool.</p>
+      {/* Sign hint */}
+      {tool === "sign" && (
+        <div className="rounded-lg border bg-muted/30 p-2.5 text-xs text-muted-foreground">
+          Click on the PDF to place your signature. Drag to move it.
+        </div>
+      )}
+
+      {/* Erase hint */}
+      {tool === "eraser" && (
+        <div className="space-y-1.5">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Eraser size</p>
+          <input
+            type="range"
+            min={5}
+            max={50}
+            value={size * 5}
+            onChange={(e) => onSizeChange(Math.round(Number(e.target.value) / 5))}
+            className="w-full accent-primary"
+          />
+        </div>
+      )}
+
+      {/* Page tools */}
+      {["rotate", "delete-page", "reorder", "split", "merge", "compress", "protect"].includes(tool) && (
+        <div className="rounded-lg border bg-amber-50 p-2.5 text-xs text-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
+          This operation will apply to the current page. Full processing available after download.
+        </div>
+      )}
+
+      {tool === "find" && (
+        <div className="space-y-1.5">
+          <input
+            type="text"
+            placeholder="Search in PDF..."
+            className="w-full rounded border bg-background px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+          />
+          <button className="w-full rounded bg-primary px-2 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90">
+            Find
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -475,25 +544,6 @@ function OptionRow({ label, children }: { label: string; children: React.ReactNo
     <div className="space-y-1">
       <p className="text-xs font-medium text-muted-foreground">{label}</p>
       {children}
-    </div>
-  );
-}
-
-function ColorPicker({ colors }: { colors: string[] }) {
-  const [selected, setSelected] = useState(colors[0]);
-  return (
-    <div className="flex flex-wrap gap-1.5">
-      {colors.map((c) => (
-        <button
-          key={c}
-          onClick={() => setSelected(c)}
-          className={cn(
-            "h-5 w-5 rounded-full border-2 transition-transform",
-            selected === c ? "scale-125 border-foreground" : "border-transparent"
-          )}
-          style={{ backgroundColor: c }}
-        />
-      ))}
     </div>
   );
 }
