@@ -3,9 +3,9 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import type { ToolAction } from "@/types";
 
-// Configure PDF.js worker
+// Configure PDF.js worker — served locally for reliability
 import * as pdfjsLib from "pdfjs-dist";
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
 
 interface PdfViewerProps {
   url: string;
