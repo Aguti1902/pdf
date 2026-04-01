@@ -62,26 +62,16 @@ export type FileUploadState =
   | { status: "error"; message: string };
 
 export type ToolAction =
+  | "pointer"
   | "add-text"
-  | "edit-text"
-  | "sign"
   | "draw"
   | "highlight"
   | "eraser"
-  | "annotate"
+  | "sign"
   | "add-image"
   | "shapes"
-  | "notes"
-  | "fill-form"
-  | "pointer"
   | "rotate"
-  | "delete-page"
-  | "reorder"
-  | "split"
-  | "merge"
-  | "compress"
-  | "protect"
-  | "find";
+  | "delete-page";
 
 export interface EditorState {
   activeTool: ToolAction | null;
