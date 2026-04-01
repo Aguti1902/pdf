@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
+import type { PdfViewerHandle } from "./PdfViewer";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -50,7 +51,9 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 
 // Lazy load PdfViewer so pdfjs-dist only loads client-side
-const PdfViewer = dynamic(() => import("./PdfViewer"), { ssr: false });
+const PdfViewer = dynamic(() => import("./PdfViewer"), { ssr: false }) as React.ForwardRefExoticComponent<
+  React.ComponentProps<typeof import("./PdfViewer")["default"]> & React.RefAttributes<PdfViewerHandle>
+>;
 
 // ─── Tool groups ─────────────────────────────────────────────────────────────
 
@@ -107,7 +110,7 @@ const allTools = toolGroups.flatMap((g) => g.items);
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function EditorLayout() {
-  const { editorState, setActiveTool, setZoom, goToPrevPage, goToNextPage } = usePdfEditor();
+  const { editorState, setActiveTool, setZoom, setTotalPages, goToPrevPage, goToNextPage } = usePdfEditor();
   const [showPaywall, setShowPaywall] = useState(false);
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
@@ -116,6 +119,7 @@ export function EditorLayout() {
   const [toolColor, setToolColor] = useState("#EF4444");
   const [toolSize, setToolSize] = useState(3);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const pdfViewerRef = useRef<PdfViewerHandle>(null);
   const isPremium = false;
 
   const loadFile = useCallback((file: File) => {
@@ -294,10 +298,10 @@ export function EditorLayout() {
 
             <Separator orientation="vertical" className="h-5" />
 
-            <Button variant="ghost" size="icon" className="h-7 w-7">
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => pdfViewerRef.current?.undo()} title="Undo (Ctrl+Z)">
               <Undo2 className="h-3.5 w-3.5" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-7 w-7">
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => pdfViewerRef.current?.redo()} title="Redo (Ctrl+Y)">
               <Redo2 className="h-3.5 w-3.5" />
             </Button>
           </div>
@@ -318,12 +322,14 @@ export function EditorLayout() {
             {pdfUrl ? (
               <div className="flex min-h-full items-start justify-center p-6">
                 <PdfViewer
+                  ref={pdfViewerRef}
                   url={pdfUrl}
                   page={editorState.currentPage}
                   zoom={editorState.zoom}
                   activeTool={editorState.activeTool}
                   toolColor={toolColor}
                   toolSize={toolSize}
+                  onPdfLoaded={setTotalPages}
                 />
               </div>
             ) : (
