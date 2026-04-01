@@ -1,63 +1,31 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import type { PdfViewerHandle } from "./PdfViewer";
+import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
-  Download,
-  ZoomIn,
-  ZoomOut,
-  ChevronLeft,
-  ChevronRight,
-  Undo2,
-  Redo2,
-  Save,
-  FileText,
-  Type,
-  PenLine,
-  Pencil,
-  Highlighter,
-  MessageSquare,
-  Image as ImageIcon,
-  ClipboardList,
-  Trash2,
-  ArrowLeft,
-  RotateCw,
-  Eraser,
-  MousePointer2,
-  Shapes,
-  StickyNote,
-  Shield,
-  Minimize2,
-  AlignLeft,
-  Columns2,
-  Scissors,
-  ArrowUpDown,
-  Upload,
-  FileSearch,
+  Download, ZoomIn, ZoomOut, ChevronLeft, ChevronRight,
+  Undo2, Redo2, Save, FileText, Type, PenLine, Pencil,
+  Highlighter, MessageSquare, Image as ImageIcon, ClipboardList,
+  Trash2, ArrowLeft, RotateCw, Eraser, MousePointer2,
+  Shapes, StickyNote, Shield, Minimize2, AlignLeft,
+  Columns2, Scissors, ArrowUpDown, Upload, FileSearch,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePdfEditor } from "@/hooks/usePdfEditor";
 import type { ToolAction } from "@/types";
+import type { Annotation, PdfViewerProps } from "./PdfViewer";
 import { PaywallModal } from "@/components/checkout/PaywallModal";
 import Link from "next/link";
-import dynamic from "next/dynamic";
 
-// Lazy load PdfViewer so pdfjs-dist only loads client-side
-const PdfViewer = dynamic(() => import("./PdfViewer"), { ssr: false }) as React.ForwardRefExoticComponent<
-  React.ComponentProps<typeof import("./PdfViewer")["default"]> & React.RefAttributes<PdfViewerHandle>
->;
+const PdfViewer = dynamic<PdfViewerProps>(() => import("./PdfViewer"), { ssr: false });
 
-// ─── Tool groups ─────────────────────────────────────────────────────────────
+// ─── Tool definitions ─────────────────────────────────────────────────────────
 
-const toolGroups: { group: string; items: { action: ToolAction; icon: React.ElementType; label: string }[] }[] = [
+const TOOL_GROUPS: { group: string; items: { action: ToolAction; icon: React.ElementType; label: string }[] }[] = [
   {
     group: "Edit",
     items: [
@@ -90,7 +58,7 @@ const toolGroups: { group: string; items: { action: ToolAction; icon: React.Elem
     items: [
       { action: "rotate", icon: RotateCw, label: "Rotate Page" },
       { action: "delete-page", icon: Trash2, label: "Delete Page" },
-      { action: "reorder", icon: ArrowUpDown, label: "Reorder Pages" },
+      { action: "reorder", icon: ArrowUpDown, label: "Reorder" },
       { action: "split", icon: Scissors, label: "Split PDF" },
       { action: "merge", icon: Columns2, label: "Merge PDF" },
     ],
@@ -105,154 +73,261 @@ const toolGroups: { group: string; items: { action: ToolAction; icon: React.Elem
   },
 ];
 
-const allTools = toolGroups.flatMap((g) => g.items);
+const ALL_TOOLS = TOOL_GROUPS.flatMap((g) => g.items);
 
-// ─── Component ────────────────────────────────────────────────────────────────
+const CURSORS: Partial<Record<ToolAction, string>> = {
+  "add-text": "text", "edit-text": "text", "fill-form": "text",
+  sign: "crosshair", draw: "crosshair", highlight: "crosshair",
+  shapes: "crosshair", "add-image": "copy",
+  eraser: "cell", annotate: "text", notes: "text", find: "text",
+};
+
+// ─── Editor Component ─────────────────────────────────────────────────────────
 
 export function EditorLayout() {
   const { editorState, setActiveTool, setZoom, setTotalPages, goToPrevPage, goToNextPage } = usePdfEditor();
-  const [showPaywall, setShowPaywall] = useState(false);
+
+  // File state
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
-  const [fileName, setFileName] = useState<string>("No file open");
-  const [isDraggingFile, setIsDraggingFile] = useState(false);
+  const [fileName, setFileName] = useState("No file open");
+  const [isDragging, setIsDragging] = useState(false);
+
+  // Annotation state — source of truth lives here
+  const [annotations, setAnnotations] = useState<Annotation[]>([]);
+  const [history, setHistory] = useState<Annotation[][]>([[]]);
+  const [historyIdx, setHistoryIdx] = useState(0);
+
+  // Live preview state (no history needed)
+  const [liveStroke, setLiveStroke] = useState<{ points: { x: number; y: number }[]; color: string; size: number } | null>(null);
+  const [liveRect, setLiveRect] = useState<{ x: number; y: number; w: number; h: number; color: string; type: "highlight" | "shape"; size: number } | null>(null);
+
+  // Text boxes (HTML overlays)
+  const [textBoxes, setTextBoxes] = useState<{ id: string; x: number; y: number; value: string; color: string }[]>([]);
+
+  // Tool options
   const [toolColor, setToolColor] = useState("#EF4444");
   const [toolSize, setToolSize] = useState(3);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const pdfViewerRef = useRef<PdfViewerHandle>(null);
-  const isPremium = false;
 
+  // Paywall
+  const [showPaywall, setShowPaywall] = useState(false);
+
+  // Refs for mouse interaction (no stale closures)
+  const isMouseDown = useRef(false);
+  const dragStart = useRef<{ x: number; y: number } | null>(null);
+
+  // File inputs
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const pendingImagePos = useRef<{ x: number; y: number } | null>(null);
+
+  const isPremium = false;
+  const activeToolLabel = ALL_TOOLS.find((t) => t.action === editorState.activeTool)?.label;
+
+  // ── History helpers ──────────────────────────────────────────────────────────
+  const commit = useCallback((next: Annotation[]) => {
+    setAnnotations(next);
+    setHistory((h) => {
+      const base = h.slice(0, historyIdx + 1);
+      return [...base, next];
+    });
+    setHistoryIdx((i) => i + 1);
+  }, [historyIdx]);
+
+  const undo = useCallback(() => {
+    setHistoryIdx((i) => {
+      const next = Math.max(0, i - 1);
+      setHistory((h) => { setAnnotations(h[next] ?? []); return h; });
+      return next;
+    });
+  }, []);
+
+  const redo = useCallback(() => {
+    setHistoryIdx((i) => {
+      setHistory((h) => {
+        const next = Math.min(h.length - 1, i + 1);
+        setAnnotations(h[next] ?? []);
+        return h;
+      });
+      return Math.min(history.length - 1, i + 1);
+    });
+  }, [history.length]);
+
+  // ── File handling ────────────────────────────────────────────────────────────
   const loadFile = useCallback((file: File) => {
-    if (!file.name.toLowerCase().endsWith(".pdf") && file.type !== "application/pdf") {
-      return;
-    }
+    if (pdfUrl) URL.revokeObjectURL(pdfUrl);
     const url = URL.createObjectURL(file);
     setPdfFile(file);
     setPdfUrl(url);
     setFileName(file.name);
-  }, []);
+    setAnnotations([]);
+    setHistory([[]]);
+    setHistoryIdx(0);
+  }, [pdfUrl]);
 
-  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) loadFile(file);
-  };
+  // ── Mouse handlers ───────────────────────────────────────────────────────────
+  const handleMouseDown = useCallback((x: number, y: number, cssX: number, cssY: number) => {
+    const tool = editorState.activeTool;
+    if (!tool) return;
+    isMouseDown.current = true;
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDraggingFile(true);
-  };
-
-  const handleDragLeave = () => setIsDraggingFile(false);
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDraggingFile(false);
-    const file = e.dataTransfer.files[0];
-    if (file) loadFile(file);
-  };
-
-  const handleDownload = () => {
-    if (!isPremium) {
-      setShowPaywall(true);
+    if (tool === "draw") {
+      setLiveStroke({ points: [{ x, y }], color: toolColor, size: toolSize });
     }
+    if (tool === "highlight" || tool === "shapes") {
+      dragStart.current = { x, y };
+      setLiveRect({ x, y, w: 0, h: 0, color: toolColor, type: tool === "highlight" ? "highlight" : "shape", size: toolSize });
+    }
+    if (tool === "eraser") {
+      // eraser starts on mousedown
+    }
+    if (["add-text", "edit-text", "sign", "annotate", "notes", "fill-form"].includes(tool)) {
+      const id = crypto.randomUUID();
+      setTextBoxes((prev) => [...prev, {
+        id, x: cssX, y: cssY,
+        value: tool === "sign" ? "Your Signature" : "",
+        color: toolColor,
+      }]);
+    }
+    if (tool === "add-image") {
+      pendingImagePos.current = { x, y };
+      imageInputRef.current?.click();
+    }
+  }, [editorState.activeTool, toolColor, toolSize]);
+
+  const handleMouseMove = useCallback((x: number, y: number) => {
+    if (!isMouseDown.current) return;
+    const tool = editorState.activeTool;
+
+    if (tool === "draw") {
+      setLiveStroke((prev) => prev ? { ...prev, points: [...prev.points, { x, y }] } : null);
+    }
+    if ((tool === "highlight" || tool === "shapes") && dragStart.current) {
+      const { x: sx, y: sy } = dragStart.current;
+      setLiveRect((prev) => prev ? {
+        ...prev,
+        x: Math.min(sx, x), y: Math.min(sy, y),
+        w: Math.abs(x - sx), h: Math.abs(y - sy),
+      } : null);
+    }
+    if (tool === "eraser") {
+      const radius = toolSize * 15;
+      setAnnotations((prev) => {
+        const filtered = prev.filter((ann) => {
+          if (ann.type !== "draw") return true;
+          return !ann.points.some((p) => Math.hypot(p.x - x, p.y - y) < radius);
+        });
+        return filtered.length !== prev.length ? filtered : prev;
+      });
+    }
+  }, [editorState.activeTool, toolSize]);
+
+  const handleMouseUp = useCallback(() => {
+    if (!isMouseDown.current) return;
+    isMouseDown.current = false;
+    const tool = editorState.activeTool;
+
+    if (tool === "draw" && liveStroke && liveStroke.points.length >= 2) {
+      commit([...annotations, {
+        id: crypto.randomUUID(),
+        type: "draw",
+        points: liveStroke.points,
+        color: liveStroke.color,
+        size: liveStroke.size,
+      }]);
+    }
+    if ((tool === "highlight" || tool === "shapes") && liveRect && liveRect.w > 4 && liveRect.h > 4) {
+      commit([...annotations, {
+        id: crypto.randomUUID(),
+        type: liveRect.type,
+        x: liveRect.x, y: liveRect.y, w: liveRect.w, h: liveRect.h,
+        color: liveRect.color,
+        size: liveRect.size,
+      }]);
+    }
+    if (tool === "eraser") {
+      commit(annotations);
+    }
+
+    setLiveStroke(null);
+    setLiveRect(null);
+    dragStart.current = null;
+  }, [editorState.activeTool, liveStroke, liveRect, annotations, commit]);
+
+  // ── Image insert ─────────────────────────────────────────────────────────────
+  const handleImageFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !pendingImagePos.current) return;
+    const pos = pendingImagePos.current;
+    pendingImagePos.current = null;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const src = ev.target?.result as string;
+      const img = new Image();
+      img.onload = () => {
+        const w = Math.min(img.width, 300);
+        const h = (img.height / img.width) * w;
+        commit([...annotations, { id: crypto.randomUUID(), type: "image", x: pos.x, y: pos.y, w, h, src }]);
+      };
+      img.src = src;
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
   };
 
-  const activeToolLabel = allTools.find((t) => t.action === editorState.activeTool)?.label;
+  const cursor = editorState.activeTool ? (CURSORS[editorState.activeTool] ?? "default") : "default";
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-background">
-      {/* ── Editor Header ── */}
-      <header className="flex h-14 shrink-0 items-center gap-3 border-b bg-card px-4 shadow-sm">
-        {/* Left: back + logo + filename */}
-        <Link
-          href="/"
-          className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
-        >
+
+      {/* ── Header ── */}
+      <header className="flex h-13 shrink-0 items-center gap-3 border-b bg-card px-4 shadow-sm">
+        <Link href="/" className="text-muted-foreground hover:text-foreground transition-colors">
           <ArrowLeft className="h-4 w-4" />
         </Link>
-
         <div className="flex items-center gap-2">
           <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary">
             <FileText className="h-4 w-4 text-primary-foreground" />
           </div>
           <span className="hidden font-bold text-sm sm:block">DocForge</span>
         </div>
-
         <Separator orientation="vertical" className="h-5" />
-
-        <span className="max-w-[160px] truncate text-sm text-muted-foreground sm:max-w-xs">
-          {fileName}
-        </span>
-
-        {pdfFile && (
-          <Badge variant="secondary" className="text-xs hidden sm:flex">
-            {(pdfFile.size / 1024 / 1024).toFixed(1)} MB
-          </Badge>
-        )}
-
+        <span className="max-w-[180px] truncate text-sm text-muted-foreground sm:max-w-xs">{fileName}</span>
+        {pdfFile && <Badge variant="secondary" className="hidden text-xs sm:flex">{(pdfFile.size / 1024 / 1024).toFixed(1)} MB</Badge>}
         <div className="flex-1" />
-
-        {/* Center: active tool badge */}
-        {activeToolLabel && (
-          <Badge className="hidden text-xs md:flex capitalize">
-            {activeToolLabel} active
-          </Badge>
-        )}
-
-        {editorState.isDirty && (
-          <Badge variant="secondary" className="text-xs">Unsaved</Badge>
-        )}
-
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 gap-1.5"
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <Upload className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Open PDF</span>
-          </Button>
-
-          <Button variant="outline" size="sm" className="h-8 gap-1.5">
-            <Save className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Save</span>
-          </Button>
-
-          <Button size="sm" className="h-8 gap-1.5 font-semibold" onClick={handleDownload}>
-            <Download className="h-3.5 w-3.5" />
-            Download
-          </Button>
-        </div>
-
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="application/pdf,.pdf"
-          className="hidden"
-          onChange={handleFileInput}
-        />
+        {activeToolLabel && <Badge className="hidden text-xs md:flex">{activeToolLabel}</Badge>}
+        <Button variant="outline" size="sm" className="h-8 gap-1.5" onClick={() => fileInputRef.current?.click()}>
+          <Upload className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline">Open PDF</span>
+        </Button>
+        <Button variant="outline" size="sm" className="h-8 gap-1.5">
+          <Save className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline">Save</span>
+        </Button>
+        <Button size="sm" className="h-8 gap-1.5 font-semibold" onClick={() => !isPremium && setShowPaywall(true)}>
+          <Download className="h-3.5 w-3.5" /> Download
+        </Button>
+        <input ref={fileInputRef} type="file" accept=".pdf,application/pdf" className="hidden"
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) loadFile(f); e.target.value = ""; }} />
+        <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageFile} />
       </header>
 
-      {/* ── Main editor body ── */}
+      {/* ── Body ── */}
       <div className="flex flex-1 overflow-hidden">
-        {/* ── Left Sidebar ── */}
+
+        {/* ── Left sidebar ── */}
         <aside className="flex w-14 shrink-0 flex-col items-center gap-0.5 overflow-y-auto border-r bg-card py-2 shadow-sm">
-          {toolGroups.map((group, gi) => (
+          {TOOL_GROUPS.map((group, gi) => (
             <div key={group.group} className="flex w-full flex-col items-center gap-0.5">
               {gi > 0 && <Separator className="my-1.5 w-8" />}
-              <p className="mb-0.5 text-[9px] font-semibold uppercase tracking-widest text-muted-foreground/60">
+              <p className="mb-0.5 text-[8px] font-semibold uppercase tracking-widest text-muted-foreground/50">
                 {group.group}
               </p>
               {group.items.map((item) => (
                 <Tooltip key={item.action}>
                   <TooltipTrigger asChild>
                     <button
-                      onClick={() =>
-                        setActiveTool(
-                          editorState.activeTool === item.action ? null : item.action
-                        )
-                      }
+                      onClick={() => setActiveTool(editorState.activeTool === item.action ? null : item.action)}
                       className={cn(
                         "flex h-9 w-9 items-center justify-center rounded-lg transition-all",
                         editorState.activeTool === item.action
@@ -263,9 +338,7 @@ export function EditorLayout() {
                       <item.icon className="h-4 w-4" />
                     </button>
                   </TooltipTrigger>
-                  <TooltipContent side="right" className="text-xs">
-                    {item.label}
-                  </TooltipContent>
+                  <TooltipContent side="right" className="text-xs">{item.label}</TooltipContent>
                 </Tooltip>
               ))}
             </div>
@@ -274,6 +347,7 @@ export function EditorLayout() {
 
         {/* ── Canvas area ── */}
         <div className="flex flex-1 flex-col overflow-hidden">
+
           {/* Top toolbar */}
           <div className="flex h-10 shrink-0 items-center gap-1 border-b bg-card px-3 shadow-sm">
             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={goToPrevPage} disabled={!pdfUrl}>
@@ -285,9 +359,7 @@ export function EditorLayout() {
             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={goToNextPage} disabled={!pdfUrl}>
               <ChevronRight className="h-3.5 w-3.5" />
             </Button>
-
             <Separator orientation="vertical" className="h-5" />
-
             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setZoom(Math.max(25, editorState.zoom - 10))}>
               <ZoomOut className="h-3.5 w-3.5" />
             </Button>
@@ -295,62 +367,88 @@ export function EditorLayout() {
             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setZoom(Math.min(200, editorState.zoom + 10))}>
               <ZoomIn className="h-3.5 w-3.5" />
             </Button>
-
             <Separator orientation="vertical" className="h-5" />
-
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => pdfViewerRef.current?.undo()} title="Undo (Ctrl+Z)">
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={undo} title="Undo" disabled={historyIdx === 0}>
               <Undo2 className="h-3.5 w-3.5" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => pdfViewerRef.current?.redo()} title="Redo (Ctrl+Y)">
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={redo} title="Redo" disabled={historyIdx >= history.length - 1}>
               <Redo2 className="h-3.5 w-3.5" />
             </Button>
+            <div className="flex-1" />
+            <span className="text-xs text-muted-foreground">{annotations.length} annotation{annotations.length !== 1 ? "s" : ""}</span>
           </div>
 
           {/* PDF canvas */}
           <div
             className="relative flex-1 overflow-auto bg-muted/30"
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
+            onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+            onDragLeave={() => setIsDragging(false)}
+            onDrop={(e) => { e.preventDefault(); setIsDragging(false); const f = e.dataTransfer.files[0]; if (f) loadFile(f); }}
           >
-            {isDraggingFile && (
-              <div className="absolute inset-0 z-20 flex items-center justify-center rounded-xl border-4 border-dashed border-primary bg-primary/10">
+            {isDragging && (
+              <div className="absolute inset-0 z-30 flex items-center justify-center border-4 border-dashed border-primary bg-primary/5">
                 <p className="text-lg font-bold text-primary">Drop PDF here</p>
               </div>
             )}
 
             {pdfUrl ? (
-              <div className="flex min-h-full items-start justify-center p-6">
+              <div className="relative flex min-h-full items-start justify-center p-6">
                 <PdfViewer
-                  ref={pdfViewerRef}
                   url={pdfUrl}
                   page={editorState.currentPage}
                   zoom={editorState.zoom}
-                  activeTool={editorState.activeTool}
-                  toolColor={toolColor}
-                  toolSize={toolSize}
+                  annotations={annotations}
+                  cursor={cursor}
+                  liveStroke={liveStroke}
+                  liveRect={liveRect}
                   onPdfLoaded={setTotalPages}
+                  onMouseDown={handleMouseDown}
+                  onMouseMove={handleMouseMove}
+                  onMouseUp={handleMouseUp}
                 />
+
+                {/* Text boxes rendered as HTML overlays */}
+                {textBoxes.map((tb) => (
+                  <div key={tb.id} className="absolute z-10" style={{ left: `calc(50% - 50% + ${tb.x}px - 3rem)`, top: `${tb.y + 24}px` }}>
+                    <textarea
+                      autoFocus
+                      rows={2}
+                      defaultValue={tb.value}
+                      className="min-w-[150px] resize rounded border-2 border-primary/70 bg-white/95 px-2 py-1 text-sm shadow-lg outline-none focus:border-primary dark:bg-neutral-900/95"
+                      style={{ color: tb.color }}
+                      placeholder="Type here..."
+                      onKeyDown={(e) => {
+                        if (e.key === "Escape") {
+                          if (!e.currentTarget.value.trim()) {
+                            setTextBoxes((p) => p.filter((t) => t.id !== tb.id));
+                          } else {
+                            e.currentTarget.blur();
+                          }
+                        }
+                      }}
+                      onBlur={(e) => {
+                        if (!e.target.value.trim()) {
+                          setTextBoxes((p) => p.filter((t) => t.id !== tb.id));
+                        }
+                      }}
+                    />
+                  </div>
+                ))}
               </div>
             ) : (
-              /* Drop zone / open state */
               <div className="flex h-full items-center justify-center p-6">
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="flex w-full max-w-md cursor-pointer flex-col items-center gap-5 rounded-2xl border-2 border-dashed border-border bg-card p-12 text-center transition-all hover:border-primary/50 hover:bg-muted/30 focus:outline-none"
+                  className="flex w-full max-w-md cursor-pointer flex-col items-center gap-5 rounded-2xl border-2 border-dashed border-border bg-card p-14 text-center transition-all hover:border-primary/50 hover:bg-primary/5 focus:outline-none"
                 >
                   <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
                     <Upload className="h-8 w-8 text-primary" />
                   </div>
                   <div>
                     <p className="text-base font-semibold">Open a PDF to start editing</p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Click here or drag & drop a PDF file
-                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">Click here or drag & drop your PDF</p>
                   </div>
-                  <Badge variant="secondary" className="text-xs">
-                    PDF up to 100MB
-                  </Badge>
+                  <Badge variant="secondary" className="text-xs">PDF up to 100MB</Badge>
                 </button>
               </div>
             )}
@@ -358,134 +456,87 @@ export function EditorLayout() {
         </div>
 
         {/* ── Right panel ── */}
-        <aside className="hidden w-56 shrink-0 flex-col border-l bg-card p-4 lg:flex">
+        <aside className="hidden w-56 shrink-0 flex-col overflow-y-auto border-l bg-card p-4 lg:flex">
           <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             {activeToolLabel ? `${activeToolLabel} Options` : "Properties"}
           </h3>
 
           {editorState.activeTool ? (
-            <div className="space-y-3">
-              <ToolOptions
-                tool={editorState.activeTool}
-                color={toolColor}
-                size={toolSize}
-                onColorChange={setToolColor}
-                onSizeChange={setToolSize}
-              />
-            </div>
+            <ToolOptions
+              tool={editorState.activeTool}
+              color={toolColor}
+              size={toolSize}
+              onColorChange={setToolColor}
+              onSizeChange={setToolSize}
+            />
           ) : (
-            <p className="text-xs text-muted-foreground">
-              Select a tool from the left sidebar to see its options.
-            </p>
+            <p className="text-xs text-muted-foreground">Select a tool to see options.</p>
           )}
 
-          <div className="mt-auto space-y-2">
+          <div className="mt-auto pt-4">
             <Separator className="mb-3" />
-            <div className="space-y-1.5 text-xs text-muted-foreground">
-              <div className="flex justify-between">
-                <span>Page</span>
-                <span>{editorState.currentPage} of {editorState.totalPages}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Zoom</span>
-                <span>{editorState.zoom}%</span>
-              </div>
-              {pdfFile && (
-                <div className="flex justify-between">
-                  <span>Size</span>
-                  <span>{(pdfFile.size / 1024 / 1024).toFixed(1)} MB</span>
-                </div>
-              )}
+            <div className="space-y-1 text-xs text-muted-foreground">
+              <div className="flex justify-between"><span>Page</span><span>{editorState.currentPage} / {editorState.totalPages}</span></div>
+              <div className="flex justify-between"><span>Zoom</span><span>{editorState.zoom}%</span></div>
+              <div className="flex justify-between"><span>Annotations</span><span>{annotations.length}</span></div>
+              {pdfFile && <div className="flex justify-between"><span>Size</span><span>{(pdfFile.size / 1024 / 1024).toFixed(1)} MB</span></div>}
             </div>
           </div>
         </aside>
       </div>
 
-      <PaywallModal
-        open={showPaywall}
-        onClose={() => setShowPaywall(false)}
-        toolName="Edit PDF"
-      />
+      <PaywallModal open={showPaywall} onClose={() => setShowPaywall(false)} toolName="Edit PDF" />
     </div>
   );
 }
 
-// ─── Contextual tool options ──────────────────────────────────────────────────
+// ─── Tool Options Panel ───────────────────────────────────────────────────────
 
-interface ToolOptionsProps {
-  tool: ToolAction;
-  color: string;
-  size: number;
-  onColorChange: (c: string) => void;
-  onSizeChange: (s: number) => void;
-}
+function ToolOptions({ tool, color, size, onColorChange, onSizeChange }: {
+  tool: ToolAction; color: string; size: number;
+  onColorChange: (c: string) => void; onSizeChange: (s: number) => void;
+}) {
+  const DRAW_COLORS = ["#000000", "#EF4444", "#3B82F6", "#22C55E", "#F59E0B", "#8B5CF6", "#EC4899", "#FFFFFF"];
+  const HL_COLORS = ["#FDE047", "#86EFAC", "#93C5FD", "#F9A8D4", "#FCA5A5", "#C4B5FD"];
+  const SIZES = [1, 2, 4, 6, 10, 16];
 
-function ToolOptions({ tool, color, size, onColorChange, onSizeChange }: ToolOptionsProps) {
-  const drawColors = ["#000000", "#EF4444", "#3B82F6", "#22C55E", "#F59E0B", "#8B5CF6", "#EC4899", "#FFFFFF"];
-  const highlightColors = ["#FDE047", "#86EFAC", "#93C5FD", "#F9A8D4", "#FCA5A5", "#C4B5FD"];
-  const sizes = [1, 2, 4, 6, 10, 16];
-
-  const isDrawTool = ["draw", "shapes", "sign", "annotate"].includes(tool);
+  const isDrawable = ["draw", "shapes", "sign", "annotate"].includes(tool);
   const isHighlight = tool === "highlight";
-  const isText = ["add-text", "edit-text", "notes"].includes(tool);
+  const isText = ["add-text", "edit-text", "notes", "fill-form"].includes(tool);
+  const isEraser = tool === "eraser";
 
   return (
-    <div className="space-y-4">
-      {/* Color picker */}
-      {(isDrawTool || isHighlight || isText) && (
-        <div className="space-y-1.5">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Color</p>
+    <div className="space-y-4 text-xs">
+      {(isDrawable || isHighlight || isText) && (
+        <div className="space-y-2">
+          <p className="font-semibold uppercase tracking-wider text-muted-foreground">Color</p>
           <div className="flex flex-wrap gap-1.5">
-            {(isHighlight ? highlightColors : drawColors).map((c) => (
-              <button
-                key={c}
-                onClick={() => onColorChange(c)}
-                className={cn(
-                  "h-6 w-6 rounded-full border-2 transition-all hover:scale-110",
-                  color === c ? "scale-125 border-foreground shadow-sm" : "border-muted"
-                )}
-                style={{ backgroundColor: c }}
-                title={c}
-              />
+            {(isHighlight ? HL_COLORS : DRAW_COLORS).map((c) => (
+              <button key={c} onClick={() => onColorChange(c)}
+                className={cn("h-6 w-6 rounded-full border-2 transition-all hover:scale-110",
+                  color === c ? "scale-125 border-foreground" : "border-transparent shadow-sm")}
+                style={{ backgroundColor: c }} />
             ))}
           </div>
-          <div className="flex items-center gap-2 mt-1">
-            <input
-              type="color"
-              value={color}
-              onChange={(e) => onColorChange(e.target.value)}
-              className="h-7 w-7 cursor-pointer rounded border"
-              title="Custom color"
-            />
-            <span className="text-xs text-muted-foreground font-mono">{color}</span>
+          <div className="flex items-center gap-2">
+            <input type="color" value={color} onChange={(e) => onColorChange(e.target.value)}
+              className="h-7 w-7 cursor-pointer rounded border" />
+            <span className="font-mono text-muted-foreground">{color}</span>
           </div>
         </div>
       )}
 
-      {/* Brush / stroke size */}
-      {isDrawTool && (
-        <div className="space-y-1.5">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Size — {size}px
-          </p>
-          <input
-            type="range"
-            min={1}
-            max={20}
-            value={size}
+      {(isDrawable || isEraser) && (
+        <div className="space-y-2">
+          <p className="font-semibold uppercase tracking-wider text-muted-foreground">Size — {size}px</p>
+          <input type="range" min={1} max={20} value={size}
             onChange={(e) => onSizeChange(Number(e.target.value))}
-            className="w-full accent-primary"
-          />
+            className="w-full accent-primary" />
           <div className="flex gap-1">
-            {sizes.map((s) => (
-              <button
-                key={s}
-                onClick={() => onSizeChange(s)}
-                className={cn(
-                  "flex h-6 w-6 items-center justify-center rounded border text-[10px] transition-colors",
-                  size === s ? "border-primary bg-primary text-primary-foreground" : "bg-background hover:bg-muted"
-                )}
-              >
+            {SIZES.map((s) => (
+              <button key={s} onClick={() => onSizeChange(s)}
+                className={cn("flex h-6 w-6 items-center justify-center rounded border transition-colors",
+                  size === s ? "border-primary bg-primary text-primary-foreground" : "bg-background hover:bg-muted")}>
                 {s}
               </button>
             ))}
@@ -493,63 +544,45 @@ function ToolOptions({ tool, color, size, onColorChange, onSizeChange }: ToolOpt
         </div>
       )}
 
-      {/* Text tool hint */}
       {isText && (
-        <div className="rounded-lg border bg-muted/30 p-2.5 text-xs text-muted-foreground">
-          Click anywhere on the PDF to place a text box. Press Escape or click away to confirm.
+        <div className="rounded-lg border bg-muted/40 p-2.5 text-muted-foreground">
+          Click on the PDF to place a text box. Press <kbd className="rounded bg-muted px-1">Esc</kbd> or click away to confirm.
         </div>
       )}
 
-      {/* Sign hint */}
       {tool === "sign" && (
-        <div className="rounded-lg border bg-muted/30 p-2.5 text-xs text-muted-foreground">
-          Click on the PDF to place your signature. Drag to move it.
+        <div className="rounded-lg border bg-muted/40 p-2.5 text-muted-foreground">
+          Click on the PDF to place your signature.
         </div>
       )}
 
-      {/* Erase hint */}
-      {tool === "eraser" && (
-        <div className="space-y-1.5">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Eraser size</p>
-          <input
-            type="range"
-            min={5}
-            max={50}
-            value={size * 5}
-            onChange={(e) => onSizeChange(Math.round(Number(e.target.value) / 5))}
-            className="w-full accent-primary"
-          />
+      {tool === "add-image" && (
+        <div className="rounded-lg border bg-muted/40 p-2.5 text-muted-foreground">
+          Click on the PDF to place an image. A file picker will open automatically.
         </div>
       )}
 
-      {/* Page tools */}
       {["rotate", "delete-page", "reorder", "split", "merge", "compress", "protect"].includes(tool) && (
-        <div className="rounded-lg border bg-amber-50 p-2.5 text-xs text-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
-          This operation will apply to the current page. Full processing available after download.
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
+          This operation requires download. Click <strong>Download</strong> in the header to apply and export.
         </div>
       )}
 
       {tool === "find" && (
-        <div className="space-y-1.5">
-          <input
-            type="text"
-            placeholder="Search in PDF..."
-            className="w-full rounded border bg-background px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
-          />
-          <button className="w-full rounded bg-primary px-2 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90">
+        <div className="space-y-2">
+          <input type="text" placeholder="Search in PDF..."
+            className="w-full rounded border bg-background px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary" />
+          <button className="w-full rounded bg-primary px-2 py-1.5 font-medium text-primary-foreground hover:bg-primary/90">
             Find
           </button>
         </div>
       )}
-    </div>
-  );
-}
 
-function OptionRow({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="space-y-1">
-      <p className="text-xs font-medium text-muted-foreground">{label}</p>
-      {children}
+      {tool === "pointer" && (
+        <div className="rounded-lg border bg-muted/40 p-2.5 text-muted-foreground">
+          Click annotations to select them. (Coming soon)
+        </div>
+      )}
     </div>
   );
 }
