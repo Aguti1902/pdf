@@ -63,15 +63,25 @@ export type FileUploadState =
 
 export type ToolAction =
   | "add-text"
+  | "edit-text"
   | "sign"
   | "draw"
   | "highlight"
+  | "eraser"
   | "annotate"
   | "add-image"
+  | "shapes"
+  | "notes"
   | "fill-form"
+  | "pointer"
   | "rotate"
   | "delete-page"
-  | "reorder";
+  | "reorder"
+  | "split"
+  | "merge"
+  | "compress"
+  | "protect"
+  | "find";
 
 export interface EditorState {
   activeTool: ToolAction | null;
