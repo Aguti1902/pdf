@@ -17,11 +17,17 @@ export interface LiveRect {
   color: string; type: "highlight" | "shape"; size: number;
 }
 
+export interface TextBox {
+  id: string; x: number; y: number; value: string; color: string; placeholder?: string;
+}
+
 export interface PdfViewerProps {
   url: string;
   page: number;
   zoom: number;
+  rotation?: number;
   annotations: Annotation[];
+  textBoxes?: TextBox[];
   selectedId?: string | null;
   cursor?: string;
   liveStroke?: { points: { x: number; y: number }[]; color: string; size: number } | null;
@@ -30,6 +36,8 @@ export interface PdfViewerProps {
   onMouseDown?: (x: number, y: number) => void;
   onMouseMove?: (x: number, y: number) => void;
   onMouseUp?: () => void;
+  onTextBoxBlur?: (id: string, value: string) => void;
+  onTextBoxDelete?: (id: string) => void;
 }
 
 // ─── Hit testing helpers ──────────────────────────────────────────────────────
@@ -57,8 +65,9 @@ export function hitTest(ann: Annotation, x: number, y: number, pad = 8): boolean
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function PdfViewer({
-  url, page, zoom, annotations, selectedId, cursor = "default",
+  url, page, zoom, rotation = 0, annotations, textBoxes = [], selectedId, cursor = "default",
   liveStroke, liveRect, onPdfLoaded, onMouseDown, onMouseMove, onMouseUp,
+  onTextBoxBlur, onTextBoxDelete,
 }: PdfViewerProps) {
   const pdfCanvasRef = useRef<HTMLCanvasElement>(null);
   const annCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -90,7 +99,7 @@ export default function PdfViewer({
 
     const pageNum = Math.min(Math.max(1, page), pdf.numPages);
     pdf.getPage(pageNum).then(pdfPage => {
-      const vp = pdfPage.getViewport({ scale: (zoom / 100) * dpr });
+      const vp = pdfPage.getViewport({ scale: (zoom / 100) * dpr, rotation: rotation % 360 });
       for (const c of [canvas, ann]) {
         c.width = vp.width; c.height = vp.height;
         c.style.width  = `${vp.width  / dpr}px`;
@@ -103,7 +112,7 @@ export default function PdfViewer({
       task.promise.then(() => { renderTaskRef.current = null; }).catch(() => {});
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, page, zoom, url]);
+  }, [loading, page, zoom, url, rotation]);
 
   // Draw annotations
   useEffect(() => {
@@ -223,6 +232,32 @@ export default function PdfViewer({
         onMouseUp={onMouseUp}
         onMouseLeave={onMouseUp}
       />
+      {/* Text boxes — rendered inside canvas container so coordinates align */}
+      {textBoxes.map((tb) => (
+        <div key={tb.id} className="absolute z-20" style={{ left: tb.x, top: tb.y }}>
+          <textarea
+            autoFocus
+            rows={2}
+            defaultValue={tb.value}
+            className="min-w-[160px] resize rounded border-2 border-primary/70 bg-white/95 px-2 py-1 text-sm shadow-lg outline-none focus:border-primary dark:bg-neutral-900/95"
+            style={{ color: tb.color }}
+            placeholder={tb.placeholder ?? "Type here..."}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") {
+                const val = e.currentTarget.value;
+                if (!val.trim()) onTextBoxDelete?.(tb.id);
+                else { onTextBoxBlur?.(tb.id, val); e.currentTarget.blur(); }
+              }
+            }}
+            onBlur={(e) => {
+              const val = e.target.value;
+              if (!val.trim()) onTextBoxDelete?.(tb.id);
+              else onTextBoxBlur?.(tb.id, val);
+            }}
+          />
+        </div>
+      ))}
+
       {!loading && (
         <div className="pointer-events-none absolute bottom-3 right-3 rounded-full bg-black/50 px-2.5 py-1 text-xs text-white">
           p. {page}
