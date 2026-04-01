@@ -1,0 +1,257 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Users ──────────────────────────────────────────────────────────────────
+
+model User {
+  id                String   @id @default(cuid())
+  email             String   @unique
+  name              String?
+  avatarUrl         String?
+  passwordHash      String?
+  emailVerified     Boolean  @default(false)
+  emailVerifiedAt   DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Stripe
+  stripeCustomerId  String?  @unique
+
+  // Relations
+  subscription      Subscription?
+  files             File[]
+  sessions          EditSession[]
+  conversions       Conversion[]
+  payments          Payment[]
+  supportTickets    SupportTicket[]
+  auditLogs         AuditLog[]
+
+  @@map("users")
+}
+
+// ─── Subscriptions ──────────────────────────────────────────────────────────
+
+model Subscription {
+  id                     String             @id @default(cuid())
+  userId                 String             @unique
+  user                   User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  stripeSubscriptionId   String             @unique
+  stripePriceId          String
+  stripeCurrentPeriodStart DateTime
+  stripeCurrentPeriodEnd   DateTime
+  stripeCancelAtPeriodEnd  Boolean          @default(false)
+
+  status                 SubscriptionStatus @default(trialing)
+  plan                   PlanType           @default(monthly)
+  trialEnd               DateTime?
+
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+
+  @@map("subscriptions")
+}
+
+enum SubscriptionStatus {
+  active
+  trialing
+  past_due
+  canceled
+  incomplete
+  incomplete_expired
+  unpaid
+}
+
+enum PlanType {
+  monthly
+  yearly
+}
+
+// ─── Files ──────────────────────────────────────────────────────────────────
+
+model File {
+  id           String    @id @default(cuid())
+  userId       String?
+  user         User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  originalName String
+  size         Int
+  mimeType     String
+  storageKey   String    @unique
+  storageUrl   String?
+  expiresAt    DateTime
+  deletedAt    DateTime?
+
+  createdAt    DateTime  @default(now())
+
+  conversionsAsInput  Conversion[] @relation("InputFile")
+  conversionsAsOutput Conversion[] @relation("OutputFile")
+
+  @@map("files")
+}
+
+// ─── Edit Sessions ───────────────────────────────────────────────────────────
+
+model EditSession {
+  id         String    @id @default(cuid())
+  userId     String?
+  user       User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  toolSlug   String
+  fileId     String?
+  state      Json      @default("{}")
+  completedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@map("edit_sessions")
+}
+
+// ─── Conversions ─────────────────────────────────────────────────────────────
+
+model Conversion {
+  id           String           @id @default(cuid())
+  userId       String?
+  user         User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  toolSlug     String
+  status       ConversionStatus @default(pending)
+  inputFileId  String
+  inputFile    File             @relation("InputFile", fields: [inputFileId], references: [id])
+  outputFileId String?
+  outputFile   File?            @relation("OutputFile", fields: [outputFileId], references: [id])
+
+  errorMessage String?
+  processingMs Int?
+
+  createdAt    DateTime         @default(now())
+  completedAt  DateTime?
+
+  @@map("conversions")
+}
+
+enum ConversionStatus {
+  pending
+  processing
+  done
+  failed
+}
+
+// ─── Payments ────────────────────────────────────────────────────────────────
+
+model Payment {
+  id                String        @id @default(cuid())
+  userId            String
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  stripePaymentIntentId String?   @unique
+  stripeInvoiceId       String?   @unique
+  amount                Int       // in cents
+  currency              String    @default("usd")
+  status                PaymentStatus @default(pending)
+  description           String?
+
+  createdAt             DateTime  @default(now())
+
+  @@map("payments")
+}
+
+enum PaymentStatus {
+  pending
+  succeeded
+  failed
+  refunded
+}
+
+// ─── Stripe Events ───────────────────────────────────────────────────────────
+
+model StripeEvent {
+  id          String   @id
+  type        String
+  livemode    Boolean
+  data        Json
+  processedAt DateTime @default(now())
+
+  @@map("stripe_events")
+}
+
+// ─── Coupons ─────────────────────────────────────────────────────────────────
+
+model Coupon {
+  id                String    @id @default(cuid())
+  code              String    @unique
+  stripeCouponId    String?
+  discountPercent   Int?
+  discountAmount    Int?      // in cents
+  maxRedemptions    Int?
+  redemptionsCount  Int       @default(0)
+  expiresAt         DateTime?
+  active            Boolean   @default(true)
+  createdAt         DateTime  @default(now())
+
+  @@map("coupons")
+}
+
+// ─── Support / Contact ───────────────────────────────────────────────────────
+
+model SupportTicket {
+  id        String              @id @default(cuid())
+  userId    String?
+  user      User?               @relation(fields: [userId], references: [id], onDelete: SetNull)
+  email     String
+  subject   String
+  message   String
+  status    SupportTicketStatus @default(open)
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  @@map("support_tickets")
+}
+
+enum SupportTicketStatus {
+  open
+  in_progress
+  resolved
+  closed
+}
+
+// ─── Audit Logs ──────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action    String
+  entity    String?
+  entityId  String?
+  metadata  Json?
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@map("audit_logs")
+}
+
+// ─── Blog Posts ───────────────────────────────────────────────────────────────
+
+model BlogPost {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  excerpt     String
+  content     String
+  coverImage  String?
+  author      String   @default("DocForge Team")
+  tags        String[]
+  published   Boolean  @default(false)
+  publishedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("blog_posts")
+}
