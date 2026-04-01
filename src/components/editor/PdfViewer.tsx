@@ -5,34 +5,65 @@ import * as pdfjsLib from "pdfjs-dist";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
 
-export type DrawAnnotation = { id: string; type: "draw"; points: { x: number; y: number }[]; color: string; size: number };
-export type RectAnnotation = { id: string; type: "highlight" | "shape"; x: number; y: number; w: number; h: number; color: string; size: number };
-export type ImageAnnotation = { id: string; type: "image"; x: number; y: number; w: number; h: number; src: string };
-export type Annotation = DrawAnnotation | RectAnnotation | ImageAnnotation;
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+export type DrawAnnotation    = { id: string; type: "draw";      points: { x: number; y: number }[]; color: string; size: number };
+export type RectAnnotation    = { id: string; type: "highlight" | "shape"; x: number; y: number; w: number; h: number; color: string; size: number };
+export type ImageAnnotation   = { id: string; type: "image";     x: number; y: number; w: number; h: number; src: string };
+export type Annotation        = DrawAnnotation | RectAnnotation | ImageAnnotation;
+
+export interface LiveRect {
+  x: number; y: number; w: number; h: number;
+  color: string; type: "highlight" | "shape"; size: number;
+}
 
 export interface PdfViewerProps {
   url: string;
   page: number;
   zoom: number;
   annotations: Annotation[];
+  selectedId?: string | null;
   cursor?: string;
+  liveStroke?: { points: { x: number; y: number }[]; color: string; size: number } | null;
+  liveRect?: LiveRect | null;
   onPdfLoaded?: (pages: number) => void;
-  onMouseDown?: (x: number, y: number, cssX: number, cssY: number) => void;
+  onMouseDown?: (x: number, y: number) => void;
   onMouseMove?: (x: number, y: number) => void;
   onMouseUp?: () => void;
-  liveStroke?: { points: { x: number; y: number }[]; color: string; size: number } | null;
-  liveRect?: { x: number; y: number; w: number; h: number; color: string; type: "highlight" | "shape"; size: number } | null;
 }
 
+// ─── Hit testing helpers ──────────────────────────────────────────────────────
+
+export function getBBox(ann: Annotation): { x: number; y: number; w: number; h: number } | null {
+  if (ann.type === "draw") {
+    if (!ann.points.length) return null;
+    const xs = ann.points.map(p => p.x), ys = ann.points.map(p => p.y);
+    const x = Math.min(...xs), y = Math.min(...ys);
+    return { x, y, w: Math.max(...xs) - x || 10, h: Math.max(...ys) - y || 10 };
+  }
+  if (ann.type === "highlight" || ann.type === "shape" || ann.type === "image") {
+    return { x: ann.x, y: ann.y, w: ann.w, h: ann.h };
+  }
+  return null;
+}
+
+export function hitTest(ann: Annotation, x: number, y: number, pad = 8): boolean {
+  const bb = getBBox(ann);
+  if (!bb) return false;
+  return x >= bb.x - pad && x <= bb.x + bb.w + pad
+      && y >= bb.y - pad && y <= bb.y + bb.h + pad;
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
 export default function PdfViewer({
-  url, page, zoom, annotations, cursor = "default",
-  onPdfLoaded, onMouseDown, onMouseMove, onMouseUp,
-  liveStroke, liveRect,
+  url, page, zoom, annotations, selectedId, cursor = "default",
+  liveStroke, liveRect, onPdfLoaded, onMouseDown, onMouseMove, onMouseUp,
 }: PdfViewerProps) {
   const pdfCanvasRef = useRef<HTMLCanvasElement>(null);
   const annCanvasRef = useRef<HTMLCanvasElement>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError]     = useState<string | null>(null);
   const pdfRef = useRef<pdfjsLib.PDFDocumentProxy | null>(null);
   const renderTaskRef = useRef<pdfjsLib.RenderTask | null>(null);
   const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
@@ -40,14 +71,9 @@ export default function PdfViewer({
   // Load PDF
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    setError(null);
+    setLoading(true); setError(null);
     pdfjsLib.getDocument(url).promise
-      .then((pdf) => {
-        if (cancelled) return;
-        pdfRef.current = pdf;
-        onPdfLoaded?.(pdf.numPages);
-      })
+      .then(pdf => { if (!cancelled) { pdfRef.current = pdf; onPdfLoaded?.(pdf.numPages); } })
       .catch(() => { if (!cancelled) setError("Could not load PDF."); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
@@ -60,15 +86,14 @@ export default function PdfViewer({
     const canvas = pdfCanvasRef.current;
     const ann = annCanvasRef.current;
     if (!pdf || !canvas || !ann || loading) return;
-
     if (renderTaskRef.current) { renderTaskRef.current.cancel(); renderTaskRef.current = null; }
 
     const pageNum = Math.min(Math.max(1, page), pdf.numPages);
-    pdf.getPage(pageNum).then((pdfPage) => {
+    pdf.getPage(pageNum).then(pdfPage => {
       const vp = pdfPage.getViewport({ scale: (zoom / 100) * dpr });
       for (const c of [canvas, ann]) {
         c.width = vp.width; c.height = vp.height;
-        c.style.width = `${vp.width / dpr}px`;
+        c.style.width  = `${vp.width  / dpr}px`;
         c.style.height = `${vp.height / dpr}px`;
       }
       const ctx = canvas.getContext("2d");
@@ -93,10 +118,9 @@ export default function PdfViewer({
       ctx.beginPath();
       ctx.strokeStyle = color;
       ctx.lineWidth = size * dpr;
-      ctx.lineCap = "round";
-      ctx.lineJoin = "round";
-      ctx.moveTo(pts[0].x, pts[0].y);
-      pts.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
+      ctx.lineCap = "round"; ctx.lineJoin = "round";
+      ctx.moveTo(pts[0].x * dpr, pts[0].y * dpr);
+      pts.slice(1).forEach(p => ctx.lineTo(p.x * dpr, p.y * dpr));
       ctx.stroke();
     };
 
@@ -114,13 +138,42 @@ export default function PdfViewer({
         ctx.strokeRect(ann.x * dpr, ann.y * dpr, ann.w * dpr, ann.h * dpr);
       } else if (ann.type === "image") {
         const img = new Image();
-        img.onload = () => ctx.drawImage(img, ann.x * dpr, ann.y * dpr, ann.w * dpr, ann.h * dpr);
-        img.src = ann.src;
+        const { x, y, w, h, src } = ann;
+        img.onload = () => ctx.drawImage(img, x * dpr, y * dpr, w * dpr, h * dpr);
+        img.src = src;
+      }
+
+      // Selection indicator
+      if (ann.id === selectedId) {
+        const bb = getBBox(ann);
+        if (bb) {
+          const PAD = 6;
+          ctx.save();
+          ctx.strokeStyle = "#3B82F6";
+          ctx.lineWidth = 2 * dpr;
+          ctx.setLineDash([6 * dpr, 3 * dpr]);
+          ctx.strokeRect(
+            (bb.x - PAD) * dpr, (bb.y - PAD) * dpr,
+            (bb.w + PAD * 2) * dpr, (bb.h + PAD * 2) * dpr
+          );
+          // Corner handles
+          ctx.setLineDash([]);
+          ctx.fillStyle = "#3B82F6";
+          const hs = 6 * dpr;
+          const corners = [
+            [bb.x - PAD, bb.y - PAD], [bb.x + bb.w + PAD, bb.y - PAD],
+            [bb.x - PAD, bb.y + bb.h + PAD], [bb.x + bb.w + PAD, bb.y + bb.h + PAD],
+          ] as [number, number][];
+          for (const [cx, cy] of corners) {
+            ctx.fillRect(cx * dpr - hs / 2, cy * dpr - hs / 2, hs, hs);
+          }
+          ctx.restore();
+        }
       }
     }
 
     // Live stroke preview
-    if (liveStroke && liveStroke.points.length > 1) {
+    if (liveStroke?.points && liveStroke.points.length > 1) {
       drawPath(liveStroke.points, liveStroke.color, liveStroke.size);
     }
 
@@ -137,14 +190,11 @@ export default function PdfViewer({
         ctx.strokeRect(liveRect.x * dpr, liveRect.y * dpr, liveRect.w * dpr, liveRect.h * dpr);
       }
     }
-  }, [annotations, liveStroke, liveRect, dpr]);
+  }, [annotations, selectedId, liveStroke, liveRect, dpr]);
 
   const getPos = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    return {
-      x: e.clientX - rect.left,   // CSS pixels
-      y: e.clientY - rect.top,
-    };
+    const r = e.currentTarget.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
   };
 
   if (error) return (
@@ -163,19 +213,16 @@ export default function PdfViewer({
           </div>
         </div>
       )}
-
       <canvas ref={pdfCanvasRef} className="block rounded-xl shadow-xl shadow-black/10" />
-
       <canvas
         ref={annCanvasRef}
         className="absolute inset-0 rounded-xl"
         style={{ cursor }}
-        onMouseDown={(e) => { const p = getPos(e); onMouseDown?.(p.x, p.y, p.x, p.y); }}
-        onMouseMove={(e) => { const p = getPos(e); onMouseMove?.(p.x, p.y); }}
+        onMouseDown={e => { const p = getPos(e); onMouseDown?.(p.x, p.y); }}
+        onMouseMove={e => { const p = getPos(e); onMouseMove?.(p.x, p.y); }}
         onMouseUp={onMouseUp}
         onMouseLeave={onMouseUp}
       />
-
       {!loading && (
         <div className="pointer-events-none absolute bottom-3 right-3 rounded-full bg-black/50 px-2.5 py-1 text-xs text-white">
           p. {page}

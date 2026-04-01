@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { usePdfEditor } from "@/hooks/usePdfEditor";
 import type { ToolAction } from "@/types";
 import type { Annotation, PdfViewerProps } from "./PdfViewer";
+import { hitTest, getBBox } from "./PdfViewer";
 import { PaywallModal } from "@/components/checkout/PaywallModal";
 import Link from "next/link";
 
@@ -80,6 +81,7 @@ const CURSORS: Partial<Record<ToolAction, string>> = {
   sign: "crosshair", draw: "crosshair", highlight: "crosshair",
   shapes: "crosshair", "add-image": "copy",
   eraser: "cell", annotate: "text", notes: "text", find: "text",
+  pointer: "default",
 };
 
 // ─── Editor Component ─────────────────────────────────────────────────────────
@@ -102,6 +104,9 @@ export function EditorLayout() {
   const [liveStroke, setLiveStroke] = useState<{ points: { x: number; y: number }[]; color: string; size: number } | null>(null);
   const [liveRect, setLiveRect] = useState<{ x: number; y: number; w: number; h: number; color: string; type: "highlight" | "shape"; size: number } | null>(null);
 
+  // Selection & drag
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
   // Text boxes (HTML overlays)
   const [textBoxes, setTextBoxes] = useState<{ id: string; x: number; y: number; value: string; color: string }[]>([]);
 
@@ -115,6 +120,9 @@ export function EditorLayout() {
   // Refs for mouse interaction (no stale closures)
   const isMouseDown = useRef(false);
   const dragStart = useRef<{ x: number; y: number } | null>(null);
+  // For pointer/drag
+  const isPointerDragging = useRef(false);
+  const dragAnnStart = useRef<Annotation | null>(null); // snapshot at drag start
 
   // File inputs
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -125,14 +133,19 @@ export function EditorLayout() {
   const activeToolLabel = ALL_TOOLS.find((t) => t.action === editorState.activeTool)?.label;
 
   // ── History helpers ──────────────────────────────────────────────────────────
-  const commit = useCallback((next: Annotation[]) => {
+  const commit = useCallback((next: Annotation[], selectId?: string) => {
     setAnnotations(next);
     setHistory((h) => {
       const base = h.slice(0, historyIdx + 1);
       return [...base, next];
     });
     setHistoryIdx((i) => i + 1);
-  }, [historyIdx]);
+    // After placing any element, switch to pointer so user can move it
+    if (selectId !== undefined) {
+      setSelectedId(selectId);
+      setActiveTool("pointer");
+    }
+  }, [historyIdx, setActiveTool]);
 
   const undo = useCallback(() => {
     setHistoryIdx((i) => {
@@ -166,11 +179,28 @@ export function EditorLayout() {
   }, [pdfUrl]);
 
   // ── Mouse handlers ───────────────────────────────────────────────────────────
-  const handleMouseDown = useCallback((x: number, y: number, cssX: number, cssY: number) => {
+  const handleMouseDown = useCallback((x: number, y: number) => {
     const tool = editorState.activeTool;
     if (!tool) return;
     isMouseDown.current = true;
 
+    // ── Pointer: select or start drag ────────────────────────────────────────
+    if (tool === "pointer") {
+      // Find topmost annotation under cursor (reverse order = top first)
+      const hit = [...annotations].reverse().find(a => hitTest(a, x, y));
+      if (hit) {
+        setSelectedId(hit.id);
+        isPointerDragging.current = true;
+        dragStart.current = { x, y };
+        dragAnnStart.current = JSON.parse(JSON.stringify(hit)); // deep clone
+      } else {
+        setSelectedId(null);
+        isPointerDragging.current = false;
+      }
+      return;
+    }
+
+    // ── Draw tools ───────────────────────────────────────────────────────────
     if (tool === "draw") {
       setLiveStroke({ points: [{ x, y }], color: toolColor, size: toolSize });
     }
@@ -178,13 +208,10 @@ export function EditorLayout() {
       dragStart.current = { x, y };
       setLiveRect({ x, y, w: 0, h: 0, color: toolColor, type: tool === "highlight" ? "highlight" : "shape", size: toolSize });
     }
-    if (tool === "eraser") {
-      // eraser starts on mousedown
-    }
     if (["add-text", "edit-text", "sign", "annotate", "notes", "fill-form"].includes(tool)) {
       const id = crypto.randomUUID();
       setTextBoxes((prev) => [...prev, {
-        id, x: cssX, y: cssY,
+        id, x, y,
         value: tool === "sign" ? "Your Signature" : "",
         color: toolColor,
       }]);
@@ -193,11 +220,32 @@ export function EditorLayout() {
       pendingImagePos.current = { x, y };
       imageInputRef.current?.click();
     }
-  }, [editorState.activeTool, toolColor, toolSize]);
+  }, [editorState.activeTool, toolColor, toolSize, annotations]);
 
   const handleMouseMove = useCallback((x: number, y: number) => {
     if (!isMouseDown.current) return;
     const tool = editorState.activeTool;
+
+    // ── Pointer drag: move annotation ────────────────────────────────────────
+    if (tool === "pointer" && isPointerDragging.current && dragStart.current && dragAnnStart.current && selectedId) {
+      const dx = x - dragStart.current.x;
+      const dy = y - dragStart.current.y;
+      const orig = dragAnnStart.current;
+
+      setAnnotations(prev => prev.map(ann => {
+        if (ann.id !== selectedId) return ann;
+        if (ann.type === "draw") {
+          const origDraw = orig as typeof ann;
+          return { ...ann, points: origDraw.points.map(p => ({ x: p.x + dx, y: p.y + dy })) };
+        }
+        if (ann.type === "highlight" || ann.type === "shape" || ann.type === "image") {
+          const origRect = orig as typeof ann;
+          return { ...ann, x: origRect.x + dx, y: origRect.y + dy };
+        }
+        return ann;
+      }));
+      return;
+    }
 
     if (tool === "draw") {
       setLiveStroke((prev) => prev ? { ...prev, points: [...prev.points, { x, y }] } : null);
@@ -220,30 +268,36 @@ export function EditorLayout() {
         return filtered.length !== prev.length ? filtered : prev;
       });
     }
-  }, [editorState.activeTool, toolSize]);
+  }, [editorState.activeTool, toolSize, selectedId]);
 
   const handleMouseUp = useCallback(() => {
     if (!isMouseDown.current) return;
     isMouseDown.current = false;
     const tool = editorState.activeTool;
 
+    // ── Pointer: commit moved position ───────────────────────────────────────
+    if (tool === "pointer" && isPointerDragging.current) {
+      isPointerDragging.current = false;
+      dragStart.current = null;
+      dragAnnStart.current = null;
+      commit(annotations); // commit final positions to history
+      return;
+    }
+
+    const newId = crypto.randomUUID();
+
     if (tool === "draw" && liveStroke && liveStroke.points.length >= 2) {
       commit([...annotations, {
-        id: crypto.randomUUID(),
-        type: "draw",
-        points: liveStroke.points,
-        color: liveStroke.color,
-        size: liveStroke.size,
-      }]);
+        id: newId, type: "draw",
+        points: liveStroke.points, color: liveStroke.color, size: liveStroke.size,
+      }], newId);
     }
     if ((tool === "highlight" || tool === "shapes") && liveRect && liveRect.w > 4 && liveRect.h > 4) {
       commit([...annotations, {
-        id: crypto.randomUUID(),
-        type: liveRect.type,
+        id: newId, type: liveRect.type,
         x: liveRect.x, y: liveRect.y, w: liveRect.w, h: liveRect.h,
-        color: liveRect.color,
-        size: liveRect.size,
-      }]);
+        color: liveRect.color, size: liveRect.size,
+      }], newId);
     }
     if (tool === "eraser") {
       commit(annotations);
@@ -267,7 +321,8 @@ export function EditorLayout() {
       img.onload = () => {
         const w = Math.min(img.width, 300);
         const h = (img.height / img.width) * w;
-        commit([...annotations, { id: crypto.randomUUID(), type: "image", x: pos.x, y: pos.y, w, h, src }]);
+        const newId = crypto.randomUUID();
+        commit([...annotations, { id: newId, type: "image", x: pos.x, y: pos.y, w, h, src }], newId);
       };
       img.src = src;
     };
@@ -398,7 +453,8 @@ export function EditorLayout() {
                   page={editorState.currentPage}
                   zoom={editorState.zoom}
                   annotations={annotations}
-                  cursor={cursor}
+                  selectedId={selectedId}
+                  cursor={editorState.activeTool === "pointer" && selectedId ? "move" : cursor}
                   liveStroke={liveStroke}
                   liveRect={liveRect}
                   onPdfLoaded={setTotalPages}
@@ -466,8 +522,15 @@ export function EditorLayout() {
               tool={editorState.activeTool}
               color={toolColor}
               size={toolSize}
+              selectedId={selectedId}
               onColorChange={setToolColor}
               onSizeChange={setToolSize}
+              onDeleteSelected={() => {
+                if (!selectedId) return;
+                const next = annotations.filter(a => a.id !== selectedId);
+                commit(next);
+                setSelectedId(null);
+              }}
             />
           ) : (
             <p className="text-xs text-muted-foreground">Select a tool to see options.</p>
@@ -492,9 +555,10 @@ export function EditorLayout() {
 
 // ─── Tool Options Panel ───────────────────────────────────────────────────────
 
-function ToolOptions({ tool, color, size, onColorChange, onSizeChange }: {
-  tool: ToolAction; color: string; size: number;
+function ToolOptions({ tool, color, size, selectedId, onColorChange, onSizeChange, onDeleteSelected }: {
+  tool: ToolAction; color: string; size: number; selectedId?: string | null;
   onColorChange: (c: string) => void; onSizeChange: (s: number) => void;
+  onDeleteSelected?: () => void;
 }) {
   const DRAW_COLORS = ["#000000", "#EF4444", "#3B82F6", "#22C55E", "#F59E0B", "#8B5CF6", "#EC4899", "#FFFFFF"];
   const HL_COLORS = ["#FDE047", "#86EFAC", "#93C5FD", "#F9A8D4", "#FCA5A5", "#C4B5FD"];
@@ -579,8 +643,24 @@ function ToolOptions({ tool, color, size, onColorChange, onSizeChange }: {
       )}
 
       {tool === "pointer" && (
-        <div className="rounded-lg border bg-muted/40 p-2.5 text-muted-foreground">
-          Click annotations to select them. (Coming soon)
+        <div className="space-y-2">
+          {selectedId ? (
+            <>
+              <div className="rounded-lg border border-primary/30 bg-primary/5 p-2.5 text-xs text-primary">
+                ✓ Element selected — drag to move
+              </div>
+              <button
+                onClick={onDeleteSelected}
+                className="flex w-full items-center justify-center gap-1.5 rounded border border-destructive/40 bg-destructive/5 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors"
+              >
+                🗑 Delete selected
+              </button>
+            </>
+          ) : (
+            <div className="rounded-lg border bg-muted/40 p-2.5 text-muted-foreground">
+              Click any annotation to select it, then drag to move.
+            </div>
+          )}
         </div>
       )}
     </div>
