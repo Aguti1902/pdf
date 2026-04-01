@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import type { Metadata } from "next";
+import { PRICING } from "@/config/pricing";
 
 export const metadata: Metadata = {
   title: "Billing – DocForge Dashboard",
@@ -37,7 +38,7 @@ const mockUser = {
 };
 
 const mockInvoices = [
-  { id: "inv_001", date: "Apr 1, 2026", amount: "$0.99", status: "paid", description: "Trial — DocForge Premium" },
+  { id: "inv_001", date: "Apr 1, 2026", amount: "0,50 €", status: "paid", description: "Trial — DocForge Premium" },
 ];
 
 export default function BillingPage() {
@@ -89,7 +90,7 @@ export default function BillingPage() {
               </div>
               <div>
                 <p className="text-muted-foreground">Renewal amount</p>
-                <p className="font-semibold text-primary">$9.99/month</p>
+                <p className="font-semibold text-primary">{PRICING.monthly.label}/month</p>
               </div>
             </div>
 
@@ -99,7 +100,7 @@ export default function BillingPage() {
                 <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
                 <p>
                   Your trial ends on <strong>Apr 8, 2026</strong>. Your card will
-                  be automatically charged <strong>$9.99</strong> on that date
+                  be automatically charged <strong>{PRICING.monthly.label}</strong> on that date
                   unless you cancel before. Cancel anytime below — no questions asked.
                 </p>
               </div>
@@ -196,9 +197,9 @@ export default function BillingPage() {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Cancel your subscription?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    You will keep Premium access until <strong>Apr 8, 2026</strong>.
-                    After that, your account will revert to the free plan.
-                    You can resubscribe at any time.
+                  You will keep Premium access until <strong>Apr 8, 2026</strong>.
+                  After that, downloading will require a new subscription.
+                  You can resubscribe at any time.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>

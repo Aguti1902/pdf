@@ -1,57 +1,42 @@
 import type { Metadata } from "next";
-import { PricingCard } from "@/components/shared/PricingCard";
 import { FaqAccordion } from "@/components/shared/FaqAccordion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { FEATURES, PRICING } from "@/config/pricing";
-import { Check, Shield, X } from "lucide-react";
+import { Check, Shield, Lock, Star } from "lucide-react";
 import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Pricing – DocForge PDF Tools",
-  description: `Start your 7-day trial for just ${PRICING.trial.label}. Full PDF editing, conversion, and signing. Then ${PRICING.monthly.label}/month. Cancel anytime.`,
+  description: `Full access to all PDF tools for just ${PRICING.trial.label} for ${PRICING.trial.days} days, then ${PRICING.monthly.label}/month. Cancel anytime.`,
   alternates: { canonical: "/pricing" },
 };
 
 const billingFaqs = [
   {
     question: "How does the trial work?",
-    answer: `You pay ${PRICING.trial.label} today and get full Premium access for ${PRICING.trial.days} days. After the trial, your subscription automatically renews at ${PRICING.monthly.label}/month. You can cancel at any time before the trial ends to avoid being charged.`,
+    answer: `You pay ${PRICING.trial.label} today and get full access to all tools for ${PRICING.trial.days} days. After the trial, your subscription automatically renews at ${PRICING.monthly.label}/month until you cancel.`,
   },
   {
-    question: "When will I be charged?",
-    answer: `You are charged ${PRICING.trial.label} immediately when you start the trial. The next charge of ${PRICING.monthly.label} occurs after ${PRICING.trial.days} days, and then monthly on the same date.`,
+    question: "Is there a free plan?",
+    answer: "No. DocForge is a professional subscription tool. You can view the editor interface for free, but downloading any processed document requires an active subscription. The trial at 0,50 € gives you full access for 7 days.",
+  },
+  {
+    question: "When will I be charged after the trial?",
+    answer: `Your next charge of ${PRICING.monthly.label} occurs exactly ${PRICING.trial.days} days after you start the trial. Then monthly on the same date until cancelled.`,
   },
   {
     question: "How do I cancel?",
-    answer: "Log into your account, go to Dashboard → Billing → Cancel Subscription. Cancelling stops all future renewals. You keep access until the end of your current billing period.",
+    answer: "Log in → Dashboard → Billing → Cancel Subscription. Cancellation takes effect immediately — no future charges. You keep access until the end of the current period.",
   },
   {
     question: "Can I get a refund?",
-    answer: "The $0.99 trial fee is non-refundable. For monthly charges, we offer refunds within 3 days if you have not downloaded any files. Please contact support@docforge.app.",
+    answer: `The ${PRICING.trial.label} trial fee is non-refundable. Monthly charges can be refunded within 3 days if no files were downloaded. Contact support@docforge.app.`,
   },
   {
-    question: "Is there a yearly plan?",
-    answer: `Yes! The yearly plan costs ${PRICING.yearly.label}/year (${PRICING.yearly.savings} savings vs monthly). Contact us or check your dashboard for the yearly upgrade option.`,
+    question: "What happens if I don't cancel before the trial ends?",
+    answer: `Your subscription automatically renews at ${PRICING.monthly.label}/month. We send a reminder email 3 days before the trial ends. You can cancel at any time.`,
   },
-  {
-    question: "What happens to my files if I cancel?",
-    answer: "All files are automatically deleted after 2 hours regardless of subscription status. Cancelling your subscription does not affect file processing — you keep access until the end of your billing period.",
-  },
-];
-
-const comparisonFeatures = [
-  { name: "Upload & preview PDFs", free: true, premium: true },
-  { name: "Try all editing tools", free: true, premium: true },
-  { name: "Download processed files", free: false, premium: true },
-  { name: "File size limit", free: "5MB", premium: "100MB" },
-  { name: "Downloads per day", free: "1", premium: "Unlimited" },
-  { name: "Watermark-free output", free: false, premium: true },
-  { name: "Batch processing", free: false, premium: true },
-  { name: "Priority processing", free: false, premium: true },
-  { name: "Advanced OCR", free: false, premium: true },
-  { name: "File history (30 days)", free: false, premium: true },
-  { name: "Email support", free: false, premium: true },
 ];
 
 export default function PricingPage() {
@@ -59,127 +44,119 @@ export default function PricingPage() {
     <div className="min-h-screen">
       {/* Hero */}
       <section className="py-20 text-center gradient-hero">
-        <div className="container mx-auto max-w-3xl px-4">
+        <div className="container mx-auto max-w-2xl px-4">
           <Badge variant="secondary" className="mb-4">Simple, transparent pricing</Badge>
           <h1 className="mb-4 text-4xl font-extrabold tracking-tight lg:text-5xl">
-            Start for less than a coffee
+            One plan. Full access.
           </h1>
-          <p className="mb-4 text-lg text-muted-foreground">
-            Try DocForge Premium for {PRICING.trial.days} days at just{" "}
-            <strong>{PRICING.trial.label}</strong>. Then only{" "}
-            {PRICING.monthly.label}/month. Cancel anytime.
+          <p className="mb-2 text-lg text-muted-foreground">
+            Start your <strong>{PRICING.trial.days}-day trial</strong> for just{" "}
+            <strong className="text-primary">{PRICING.trial.label}</strong>.
+            Then only <strong>{PRICING.monthly.label}/month</strong>.
           </p>
           <p className="text-sm text-muted-foreground">
-            No hidden fees · No contracts · Cancel in one click
+            Cancel anytime · No hidden fees · Billed monthly
           </p>
         </div>
       </section>
 
-      {/* Pricing cards */}
+      {/* Single plan card */}
       <section className="py-16 border-t">
-        <div className="container mx-auto max-w-3xl px-4">
-          <div className="grid gap-6 md:grid-cols-2">
-            <PricingCard
-              variant="free"
-              features={FEATURES.free}
-            />
-            <PricingCard
-              variant="pro"
-              features={FEATURES.premium}
-              highlighted
-            />
-          </div>
+        <div className="container mx-auto max-w-lg px-4">
+          <div className="relative rounded-2xl border-2 border-primary bg-card p-8 shadow-lg shadow-primary/10">
+            <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary px-4 py-1 text-sm font-bold">
+              Full Access
+            </Badge>
 
-          {/* Subscription disclosure */}
-          <div className="mt-6 rounded-xl border bg-muted/30 p-4 text-xs text-muted-foreground">
-            <p className="flex items-start gap-2">
-              <Shield className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
-              <span>
-                <strong>Subscription terms:</strong> The {PRICING.trial.days}-day trial is{" "}
-                {PRICING.trial.label}. After the trial period, your subscription
-                automatically renews at {PRICING.monthly.label}/month until you cancel.
-                Renewal date and amount are always visible in your account dashboard.
-                Cancel anytime from{" "}
-                <Link href="/dashboard/billing" className="underline">
-                  Account → Billing
-                </Link>{" "}
-                or email{" "}
-                <a href="mailto:support@docforge.app" className="underline">
-                  support@docforge.app
-                </a>
-                . See full{" "}
-                <Link href="/legal/subscription" className="underline">
-                  Subscription Terms
-                </Link>.
-              </span>
-            </p>
-          </div>
-        </div>
-      </section>
+            {/* Stars */}
+            <div className="mb-4 flex justify-center gap-0.5">
+              {[1,2,3,4,5].map((i) => (
+                <Star key={i} className="h-4 w-4 fill-amber-400 text-amber-400" />
+              ))}
+              <span className="ml-2 text-sm text-muted-foreground">4.8 · 50K+ reviews</span>
+            </div>
 
-      {/* Feature comparison table */}
-      <section className="py-16 bg-muted/30 border-t">
-        <div className="container mx-auto max-w-3xl px-4">
-          <h2 className="mb-8 text-center text-2xl font-bold">Free vs Premium</h2>
-          <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b bg-muted/30">
-                  <th className="px-5 py-3 text-left text-sm font-semibold">Feature</th>
-                  <th className="px-5 py-3 text-center text-sm font-semibold">Free</th>
-                  <th className="px-5 py-3 text-center text-sm font-semibold text-primary">Premium</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {comparisonFeatures.map((f) => (
-                  <tr key={f.name} className="hover:bg-muted/20">
-                    <td className="px-5 py-3 text-sm">{f.name}</td>
-                    <td className="px-5 py-3 text-center">
-                      {typeof f.free === "boolean" ? (
-                        f.free ? (
-                          <Check className="mx-auto h-4 w-4 text-green-500" />
-                        ) : (
-                          <X className="mx-auto h-4 w-4 text-muted-foreground/50" />
-                        )
-                      ) : (
-                        <span className="text-sm text-muted-foreground">{f.free}</span>
-                      )}
-                    </td>
-                    <td className="px-5 py-3 text-center">
-                      {typeof f.premium === "boolean" ? (
-                        f.premium ? (
-                          <Check className="mx-auto h-4 w-4 text-primary" />
-                        ) : (
-                          <X className="mx-auto h-4 w-4 text-muted-foreground/50" />
-                        )
-                      ) : (
-                        <span className="text-sm font-medium text-primary">{f.premium}</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            {/* Price */}
+            <div className="mb-2 text-center">
+              <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-1">Today only</p>
+              <div className="flex items-baseline justify-center gap-2">
+                <span className="text-5xl font-extrabold text-primary">{PRICING.trial.label}</span>
+                <span className="text-muted-foreground text-sm">/{PRICING.trial.days}-day trial</span>
+              </div>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Then <strong>{PRICING.monthly.label}/month</strong> — cancel before trial ends to pay nothing more
+              </p>
+            </div>
+
+            {/* CTA */}
+            <Button size="lg" className="mt-5 mb-6 w-full text-base font-bold" asChild>
+              <Link href="/checkout">
+                <Lock className="mr-2 h-4 w-4" />
+                Start {PRICING.trial.days}-Day Trial — {PRICING.trial.label}
+              </Link>
+            </Button>
+
+            {/* Features */}
+            <ul className="space-y-2.5">
+              {FEATURES.premium.map((f) => (
+                <li key={f} className="flex items-center gap-2.5 text-sm">
+                  <Check className="h-4 w-4 shrink-0 text-primary" />
+                  {f}
+                </li>
+              ))}
+            </ul>
+
+            {/* Disclosure */}
+            <div className="mt-6 rounded-lg border bg-muted/30 p-3 text-xs text-muted-foreground">
+              <div className="flex gap-2">
+                <Shield className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+                <p>
+                  By subscribing you agree to a {PRICING.trial.days}-day trial at {PRICING.trial.label},
+                  after which <strong>{PRICING.monthly.label}/month</strong> will be charged automatically
+                  until cancelled. Cancel anytime from{" "}
+                  <Link href="/dashboard/billing" className="underline">Account → Billing</Link>.
+                  See <Link href="/legal/subscription" className="underline">Subscription Terms</Link>.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Guarantee */}
+      {/* Trust row */}
+      <section className="py-10 border-t bg-muted/20">
+        <div className="container mx-auto max-w-4xl px-4">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 text-center">
+            {[
+              { value: "500K+", label: "Users worldwide" },
+              { value: "10M+", label: "Files processed" },
+              { value: "4.8★", label: "Average rating" },
+              { value: "100%", label: "Secure & private" },
+            ].map((s) => (
+              <div key={s.label}>
+                <p className="text-2xl font-extrabold text-primary">{s.value}</p>
+                <p className="text-xs text-muted-foreground">{s.label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Cancel guarantee */}
       <section className="py-14 border-t">
         <div className="container mx-auto max-w-2xl px-4 text-center">
-          <div className="flex h-14 w-14 mx-auto mb-4 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/20">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/20">
             <Shield className="h-7 w-7 text-green-600" />
           </div>
           <h2 className="mb-3 text-2xl font-bold">Easy cancellation, guaranteed</h2>
-          <p className="text-muted-foreground">
-            We believe in complete transparency. Cancel anytime from your account dashboard
-            in one click — no phone calls, no emails, no hoops to jump through.
-            We&apos;ll never trap you in a subscription you don&apos;t want.
+          <p className="text-muted-foreground text-sm max-w-md mx-auto">
+            Cancel anytime in one click from your account dashboard. No phone calls,
+            no forms, no tricks. If you cancel before the trial ends, you pay nothing more.
           </p>
         </div>
       </section>
 
-      {/* Billing FAQs */}
+      {/* FAQ */}
       <section className="py-16 bg-muted/30 border-t">
         <div className="container mx-auto max-w-2xl px-4">
           <h2 className="mb-8 text-center text-2xl font-bold">Billing FAQ</h2>
@@ -189,18 +166,16 @@ export default function PricingPage() {
 
       {/* Final CTA */}
       <section className="py-14 border-t">
-        <div className="container mx-auto max-w-xl px-4 text-center">
-          <h2 className="mb-3 text-2xl font-bold">Ready to go Premium?</h2>
-          <p className="mb-6 text-muted-foreground">
-            Start your {PRICING.trial.days}-day trial now. Cancel any time.
+        <div className="container mx-auto max-w-md px-4 text-center">
+          <h2 className="mb-2 text-2xl font-bold">Ready to get started?</h2>
+          <p className="mb-6 text-sm text-muted-foreground">
+            {PRICING.trial.days}-day full access trial · {PRICING.trial.label} today · {PRICING.monthly.label}/month after
           </p>
-          <Button size="lg" className="w-full sm:w-auto" asChild>
-            <Link href="/checkout">
-              Start Trial — {PRICING.trial.label}
-            </Link>
+          <Button size="lg" className="w-full font-bold" asChild>
+            <Link href="/checkout">Start Trial — {PRICING.trial.label}</Link>
           </Button>
           <p className="mt-3 text-xs text-muted-foreground">
-            Then {PRICING.monthly.label}/month · Cancel before trial ends to pay nothing more
+            Cancel before {PRICING.trial.days} days to pay nothing more
           </p>
         </div>
       </section>
