@@ -26,8 +26,8 @@ export function FileUploader({
   accept = DEFAULT_ACCEPT,
   maxSize = 100 * 1024 * 1024,
   onUploadComplete,
-  label = "Drop your PDF here",
-  description = "or click to browse — PDF up to 100MB",
+  label = "Drop your PDF here to get started",
+  description = "or click to browse · Subscription required to download",
   className,
 }: FileUploaderProps) {
   const { state, upload, reset } = useUpload();

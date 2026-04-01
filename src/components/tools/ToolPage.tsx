@@ -69,7 +69,7 @@ export function ToolPage({ tool }: ToolPageProps) {
             <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl" style={{ backgroundColor: tool.bgColor }}>
               <IconComponent className="h-8 w-8" style={{ color: tool.color }} />
             </div>
-            <Badge variant="secondary" className="mb-3">Free Online Tool</Badge>
+            <Badge variant="secondary" className="mb-3">Professional PDF Tool</Badge>
             <h1 className="mb-4 text-4xl font-extrabold tracking-tight lg:text-5xl">
               {tool.name} Online
             </h1>
@@ -82,7 +82,7 @@ export function ToolPage({ tool }: ToolPageProps) {
                 accept={acceptMap[tool.category]}
                 onUploadComplete={handleUploadComplete}
                 label={`Drop your file here`}
-                description={`or click to browse · Free to try`}
+                description={`or click to browse · No account needed to upload`}
               />
               {uploadedFile && (
                 <Button
