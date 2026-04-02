@@ -20,6 +20,7 @@ import { signInSchema, type SignInInput } from "@/lib/validations";
 import { toast } from "sonner";
 import { SITE } from "@/config/seo";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { GoogleButton } from "@/components/auth/GoogleButton";
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
@@ -75,6 +76,14 @@ export default function LoginPage() {
           <p className="mb-7 text-sm text-muted-foreground">
             {l?.subtitle ?? "Sign in to your account to continue."}
           </p>
+
+          <GoogleButton redirectTo="/dashboard" />
+
+          <div className="flex items-center gap-3">
+            <div className="h-px flex-1 bg-border" />
+            <span className="text-xs text-muted-foreground">or</span>
+            <div className="h-px flex-1 bg-border" />
+          </div>
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">

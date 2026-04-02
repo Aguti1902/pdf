@@ -20,6 +20,7 @@ import { signUpSchema, type SignUpInput } from "@/lib/validations";
 import { toast } from "sonner";
 import { SITE } from "@/config/seo";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { GoogleButton } from "@/components/auth/GoogleButton";
 
 export default function SignUpPage() {
   const [showPassword, setShowPassword] = useState(false);
@@ -82,6 +83,14 @@ export default function SignUpPage() {
               </li>
             ))}
           </ul>
+
+          <GoogleButton redirectTo="/dashboard" label={s?.createBtn ? "Continue with Google" : "Continue with Google"} />
+
+          <div className="flex items-center gap-3">
+            <div className="h-px flex-1 bg-border" />
+            <span className="text-xs text-muted-foreground">or</span>
+            <div className="h-px flex-1 bg-border" />
+          </div>
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">

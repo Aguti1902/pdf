@@ -16,6 +16,7 @@ model User {
   name              String?
   avatarUrl         String?
   passwordHash      String?
+  googleId          String?  @unique
   emailVerified     Boolean  @default(false)
   emailVerifiedAt   DateTime?
   createdAt         DateTime @default(now())
