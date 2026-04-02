@@ -542,3 +542,35 @@ export function getRelatedTools(toolId: string): Tool[] {
     .map((slug) => tools.find((t) => t.id === slug))
     .filter(Boolean) as Tool[];
 }
+
+// ─── Editor-based tools ───────────────────────────────────────────────────────
+// Tools that open the PDF editor with a specific tool pre-selected.
+// Key = tool slug, value = editor ToolAction to activate.
+export const EDITOR_TOOL_MAP: Record<string, string> = {
+  "edit-pdf":      "pointer",
+  "sign-pdf":      "sign",
+  "fill-pdf":      "add-text",
+  "annotate-pdf":  "draw",
+  "add-text-pdf":  "add-text",
+  "highlight-pdf": "highlight",
+  "draw-pdf":      "draw",
+  "add-image-pdf": "add-image",
+  "rotate-pdf":    "rotate",
+  "delete-pages":  "delete-page",
+};
+
+// ─── Coming-soon tools ────────────────────────────────────────────────────────
+// These require server-side PDF processing and are not yet implemented.
+export const COMING_SOON_TOOLS = new Set([
+  "merge-pdf",
+  "split-pdf",
+  "compress-pdf",
+  "reorder-pages",
+  "pdf-to-word",
+  "pdf-to-jpg",
+  "pdf-to-png",
+  "word-to-pdf",
+  "jpg-to-pdf",
+  "excel-to-pdf",
+  "ppt-to-pdf",
+]);

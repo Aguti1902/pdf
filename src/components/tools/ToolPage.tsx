@@ -2,15 +2,16 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { FileUploader } from "@/components/tools/FileUploader";
 import { FaqAccordion } from "@/components/shared/FaqAccordion";
 import { TrustBadges } from "@/components/shared/TrustBadges";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, ChevronRight } from "lucide-react";
+import { ArrowRight, ChevronRight, Clock, Wrench } from "lucide-react";
 import type { Tool } from "@/config/tools";
+import { getRelatedTools, EDITOR_TOOL_MAP, COMING_SOON_TOOLS } from "@/config/tools";
 import type { UploadedFile } from "@/types";
-import { getRelatedTools } from "@/config/tools";
 import * as Icons from "lucide-react";
 import { PaywallModal } from "@/components/checkout/PaywallModal";
 
@@ -19,18 +20,41 @@ interface ToolPageProps {
 }
 
 export function ToolPage({ tool }: ToolPageProps) {
-  const [uploadedFile, setUploadedFile] = useState<UploadedFile | null>(null);
+  const [uploadedFile, setUploadedFile] = useState<(UploadedFile & { _rawFile?: File }) | null>(null);
   const [showPaywall, setShowPaywall] = useState(false);
+  const [redirecting, setRedirecting] = useState(false);
+  const router = useRouter();
   const relatedTools = getRelatedTools(tool.id);
+
+  const isEditorTool  = tool.slug in EDITOR_TOOL_MAP;
+  const isComingSoon  = COMING_SOON_TOOLS.has(tool.slug);
+  const editorAction  = EDITOR_TOOL_MAP[tool.slug];
 
   const IconComponent = (Icons as unknown as Record<string, Icons.LucideIcon>)[tool.icon] ?? Icons.FileText;
 
-  const handleUploadComplete = (file: UploadedFile) => {
+  const handleUploadComplete = (file: UploadedFile & { _rawFile?: File }) => {
     setUploadedFile(file);
   };
 
   const handleContinue = () => {
-    setShowPaywall(true);
+    if (isEditorTool && uploadedFile?._rawFile) {
+      // Save file to sessionStorage and open editor with correct tool
+      setRedirecting(true);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const dataUrl = e.target?.result as string;
+        try {
+          sessionStorage.setItem(
+            `pdfcraft_file_${uploadedFile.id}`,
+            JSON.stringify({ dataUrl, name: uploadedFile._rawFile!.name, id: uploadedFile.id })
+          );
+        } catch { /* sessionStorage full */ }
+        router.push(`/editor?fileId=${uploadedFile.id}&tool=${editorAction}`);
+      };
+      reader.readAsDataURL(uploadedFile._rawFile);
+    } else {
+      setShowPaywall(true);
+    }
   };
 
   const acceptMap: Record<string, Record<string, string[]>> = {
@@ -45,7 +69,7 @@ export function ToolPage({ tool }: ToolPageProps) {
       "image/png": [".png"],
     },
     "convert-from": { "application/pdf": [".pdf"] },
-    edit: { "application/pdf": [".pdf"] },
+    edit:     { "application/pdf": [".pdf"] },
     organize: { "application/pdf": [".pdf"] },
   };
 
@@ -69,7 +93,13 @@ export function ToolPage({ tool }: ToolPageProps) {
             <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl" style={{ backgroundColor: tool.bgColor }}>
               <IconComponent className="h-8 w-8" style={{ color: tool.color }} />
             </div>
-            <Badge variant="secondary" className="mb-3">Professional PDF Tool</Badge>
+
+            <div className="mb-3 flex items-center justify-center gap-2">
+              <Badge variant="secondary">Professional PDF Tool</Badge>
+              {isEditorTool  && <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-green-200"><Wrench className="mr-1 h-3 w-3" />Functional</Badge>}
+              {isComingSoon  && <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 border-amber-200"><Clock className="mr-1 h-3 w-3" />Coming Soon</Badge>}
+            </div>
+
             <h1 className="mb-4 text-4xl font-extrabold tracking-tight lg:text-5xl">
               {tool.name} Online
             </h1>
@@ -77,24 +107,57 @@ export function ToolPage({ tool }: ToolPageProps) {
               {tool.longDescription}
             </p>
 
-            <div className="mx-auto max-w-lg">
-              <FileUploader
-                accept={acceptMap[tool.category]}
-                onUploadComplete={handleUploadComplete}
-                label={`Drop your file here`}
-                description={`or click to browse · No account needed to upload`}
-              />
-              {uploadedFile && (
-                <Button
-                  size="lg"
-                  className="mt-4 w-full gap-2 text-base"
-                  onClick={handleContinue}
-                >
-                  Continue with {tool.name}
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
+            {isComingSoon ? (
+              /* ── Coming Soon state ── */
+              <div className="mx-auto max-w-lg rounded-2xl border-2 border-dashed border-amber-200 bg-amber-50 px-8 py-10 text-center dark:border-amber-800 dark:bg-amber-900/10">
+                <Clock className="mx-auto mb-4 h-12 w-12 text-amber-500" />
+                <h2 className="mb-2 text-xl font-bold text-foreground">Coming Soon</h2>
+                <p className="mb-5 text-sm text-muted-foreground">
+                  We&apos;re working on the <strong>{tool.name}</strong> feature. In the meantime,
+                  you can use our full PDF editor which includes many editing tools.
+                </p>
+                <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
+                  <Button size="sm" asChild>
+                    <Link href="/editor">Open PDF Editor <ArrowRight className="ml-1.5 h-3.5 w-3.5" /></Link>
+                  </Button>
+                  <Button size="sm" variant="outline" asChild>
+                    <Link href="/pricing">See Plans</Link>
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              /* ── Upload + Continue ── */
+              <div className="mx-auto max-w-lg">
+                <FileUploader
+                  accept={acceptMap[tool.category]}
+                  onUploadComplete={handleUploadComplete}
+                  label="Drop your file here"
+                  description="or click to browse · No account needed to upload"
+                />
+                {uploadedFile && (
+                  <Button
+                    size="lg"
+                    className="mt-4 w-full gap-2 text-base"
+                    onClick={handleContinue}
+                    disabled={redirecting}
+                  >
+                    {redirecting ? (
+                      <><Icons.Loader2 className="h-4 w-4 animate-spin" /> Opening editor…</>
+                    ) : (
+                      <>Continue with {tool.name} <ArrowRight className="h-4 w-4" /></>
+                    )}
+                  </Button>
+                )}
+
+                {/* Hint for editor tools */}
+                {isEditorTool && (
+                  <p className="mt-3 text-xs text-center text-muted-foreground">
+                    <Icons.Zap className="inline h-3 w-3 text-primary mr-1" />
+                    Opens the PDF editor with <strong>{tool.name}</strong> tool pre-selected
+                  </p>
+                )}
+              </div>
+            )}
 
             <div className="mt-6">
               <TrustBadges compact />
@@ -125,9 +188,9 @@ export function ToolPage({ tool }: ToolPageProps) {
             <h2 className="mb-10 text-2xl font-bold">How to {tool.name}</h2>
             <div className="grid gap-8 sm:grid-cols-3">
               {[
-                { step: "1", title: "Upload your file", desc: "Drag & drop or select your file. Secure and private." },
-                { step: "2", title: "Apply changes", desc: `Use our ${tool.name.toLowerCase()} tool to make your modifications.` },
-                { step: "3", title: "Download result", desc: "Get your processed file instantly. Clean output guaranteed." },
+                { step: "1", title: "Upload your file",   desc: "Drag & drop or select your file. Secure and private." },
+                { step: "2", title: "Apply changes",      desc: `Use our ${tool.name.toLowerCase()} tool to make your modifications.` },
+                { step: "3", title: "Download result",    desc: "Get your processed file instantly. Clean output guaranteed." },
               ].map((s) => (
                 <div key={s.step} className="flex flex-col items-center">
                   <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground font-bold text-lg">

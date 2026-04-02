@@ -182,6 +182,15 @@ export function EditorLayout() {
     const fileId   = searchParams?.get("fileId");
     const postAuth = searchParams?.get("postAuth") as "download" | "save" | null;
     const restore  = searchParams?.get("restore");
+    const toolParam = searchParams?.get("tool");
+
+    // Pre-select tool if provided via URL (e.g. from tool landing pages)
+    if (toolParam) {
+      const validTools = ["pointer","add-text","draw","highlight","shapes","eraser","sign","add-image","rotate","delete-page"];
+      if (validTools.includes(toolParam)) {
+        setTimeout(() => setActiveTool(toolParam as import("@/types").ToolAction), 200);
+      }
+    }
 
     // Restore from standard fileId upload
     if (fileId) {
