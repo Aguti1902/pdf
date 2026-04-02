@@ -1,13 +1,19 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Loader2, Lock, ShieldCheck } from "lucide-react";
+import { Loader2, X } from "lucide-react";
 import Link from "next/link";
-import { PRICING, CURRENCIES, DEFAULT_CURRENCY, type CurrencyCode } from "@/config/pricing";
+import { loadStripe } from "@stripe/stripe-js";
+import { EmbeddedCheckout, EmbeddedCheckoutProvider } from "@stripe/react-stripe-js";
+import { CURRENCIES, DEFAULT_CURRENCY, type CurrencyCode } from "@/config/pricing";
 import { CurrencySelector } from "./CurrencySelector";
-import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { toast } from "sonner";
+
+const stripePromise = loadStripe(
+  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? ""
+);
 
 interface PaywallModalProps {
   open: boolean;
@@ -17,130 +23,135 @@ interface PaywallModalProps {
   userName?: string;
 }
 
-/** Map locale codes to a preferred default currency */
 const LOCALE_CURRENCY: Record<string, CurrencyCode> = {
-  en: "USD",
-  es: "EUR",
-  fr: "EUR",
-  de: "EUR",
-  it: "EUR",
-  uk: "EUR",
-  ru: "EUR",
+  en: "USD", es: "EUR", fr: "EUR", de: "EUR", it: "EUR", uk: "EUR", ru: "EUR",
 };
 
 export function PaywallModal({ open, onClose, toolName: _toolName, userEmail, userName }: PaywallModalProps) {
   const { locale } = useLanguage();
   const defaultCurrency: CurrencyCode = LOCALE_CURRENCY[locale] ?? DEFAULT_CURRENCY;
 
-  const [loading, setLoading]   = useState(false);
-  const [currency, setCurrency] = useState<CurrencyCode>(defaultCurrency);
-  const didAutoLaunch = useRef(false);
+  const [currency, setCurrency]           = useState<CurrencyCode>(defaultCurrency);
+  const [clientSecret, setClientSecret]   = useState<string | null>(null);
+  const [loadingSecret, setLoadingSecret] = useState(false);
+  const fetchedKey = useRef<string>("");  // tracks last fetched currency to avoid duplicate calls
 
-  // Sync currency when locale changes
+  // Sync default currency to locale
   useEffect(() => {
     setCurrency(LOCALE_CURRENCY[locale] ?? DEFAULT_CURRENCY);
   }, [locale]);
 
-  const curr = CURRENCIES[currency];
-
-  const handleCheckout = async (selectedCurrency = currency) => {
-    if (loading) return;
-    setLoading(true);
+  const fetchClientSecret = useCallback(async (curr: CurrencyCode) => {
+    const key = `${curr}|${userEmail}`;
+    if (fetchedKey.current === key) return; // already fetched for this combination
+    fetchedKey.current = key;
+    setLoadingSecret(true);
+    setClientSecret(null);
     try {
-      const res = await fetch("/api/stripe/create-checkout", {
+      const res = await fetch("/api/stripe/create-embedded-checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          priceId:   PRICING.monthly.stripePriceId,
-          userEmail,
-          userName,
-          currency:  selectedCurrency,
-        }),
+        body: JSON.stringify({ userEmail, userName, currency: curr }),
       });
-
-      if (!res.ok) {
-        const { error } = await res.json().catch(() => ({ error: "Unknown error" }));
-        throw new Error(error);
-      }
-
-      const { url } = await res.json();
-      if (url) window.location.href = url;
-      else throw new Error("No redirect URL received");
+      if (!res.ok) throw new Error("checkout_create_failed");
+      const { clientSecret: cs, error } = await res.json();
+      if (error) throw new Error(error);
+      setClientSecret(cs);
     } catch (err) {
       console.error(err);
-      toast.error("Could not start checkout. Please try again.");
-      setLoading(false);
+      toast.error("Could not load checkout. Please try again.");
+      fetchedKey.current = ""; // allow retry
+    } finally {
+      setLoadingSecret(false);
     }
-  };
+  }, [userEmail, userName]);
 
-  // Auto-launch checkout the first time the modal opens
+  // Fetch session when modal opens or currency changes
   useEffect(() => {
-    if (open && !didAutoLaunch.current) {
-      didAutoLaunch.current = true;
-      // Small delay so the modal renders before we navigate
-      const t = setTimeout(() => handleCheckout(LOCALE_CURRENCY[locale] ?? DEFAULT_CURRENCY), 400);
-      return () => clearTimeout(t);
-    }
     if (!open) {
-      didAutoLaunch.current = false;
+      // Reset on close so next open creates a fresh session
+      setClientSecret(null);
+      fetchedKey.current = "";
+      return;
     }
+    fetchClientSecret(currency);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
+  // When currency changes after modal is open, reset and fetch new session
+  const handleCurrencyChange = (newCurrency: CurrencyCode) => {
+    setCurrency(newCurrency);
+    fetchedKey.current = "";
+    setClientSecret(null);
+    fetchClientSecret(newCurrency);
+  };
+
+  const curr = CURRENCIES[currency];
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-xs gap-0 overflow-hidden rounded-2xl border border-border p-0 shadow-xl">
-
-        {/* Currency selector */}
-        <div className="flex justify-center border-b border-border px-6 py-3">
-          <CurrencySelector value={currency} onChange={setCurrency} />
-        </div>
-
-        {/* Price columns */}
-        <div className="grid grid-cols-2 divide-x divide-border">
-          <div className="flex flex-col items-center px-5 py-7">
-            <p className="mb-1.5 text-sm font-semibold text-muted-foreground">Hoy</p>
-            <p className="text-4xl font-extrabold tracking-tight text-foreground">{curr.trialLabel}</p>
-            <p className="mt-1.5 text-xs text-muted-foreground">Prueba de {PRICING.trial.days} días</p>
-          </div>
-          <div className="flex flex-col items-center px-5 py-7">
-            <p className="mb-1.5 text-sm font-semibold text-muted-foreground">Luego</p>
-            <p className="text-4xl font-extrabold tracking-tight text-foreground">{curr.monthlyLabel}</p>
-            <p className="mt-1.5 text-xs text-muted-foreground">/ mes</p>
-          </div>
-        </div>
-
-        {/* CTA — loading state while auto-redirecting */}
-        <div className="border-t border-border px-5 pb-5 pt-4">
+      <DialogContent
+        className="max-w-md gap-0 overflow-hidden rounded-2xl border border-border p-0 shadow-2xl"
+        // Remove default close button so we can place our own
+        hideCloseButton
+      >
+        {/* Header row: currency selector + close */}
+        <div className="flex items-center justify-between border-b border-border px-5 py-3">
+          <CurrencySelector value={currency} onChange={handleCurrencyChange} />
           <button
-            onClick={() => handleCheckout()}
-            disabled={loading}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-foreground px-4 py-3.5 text-base font-bold text-background transition hover:opacity-90 disabled:opacity-60"
+            onClick={onClose}
+            className="rounded-full p-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground"
           >
-            {loading ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Redirigiendo al pago…
-              </>
-            ) : (
-              <>
-                <Lock className="h-4 w-4" />
-                Iniciar prueba de {PRICING.trial.days} días
-              </>
-            )}
+            <X className="h-4 w-4" />
           </button>
+        </div>
 
-          <div className="mt-3 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
-            <ShieldCheck className="h-3.5 w-3.5 text-green-500" />
-            Pago seguro · Cancela cuando quieras
+        {/* Price summary strip */}
+        <div className="grid grid-cols-2 divide-x divide-border border-b border-border">
+          <div className="flex flex-col items-center px-5 py-5">
+            <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Hoy</p>
+            <p className="text-3xl font-extrabold tracking-tight">{curr.trialLabel}</p>
+            <p className="mt-1 text-xs text-muted-foreground">Prueba 2 días</p>
+          </div>
+          <div className="flex flex-col items-center px-5 py-5">
+            <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Luego</p>
+            <p className="text-3xl font-extrabold tracking-tight">{curr.monthlyLabel}</p>
+            <p className="mt-1 text-xs text-muted-foreground">/ mes</p>
           </div>
         </div>
 
-        {/* Subscription fine print — minimal and discreet */}
+        {/* Embedded Stripe checkout */}
+        <div className="min-h-[300px]">
+          {loadingSecret ? (
+            <div className="flex h-64 flex-col items-center justify-center gap-3 text-muted-foreground">
+              <Loader2 className="h-7 w-7 animate-spin text-primary" />
+              <p className="text-sm">Cargando pago seguro…</p>
+            </div>
+          ) : clientSecret ? (
+            <EmbeddedCheckoutProvider
+              stripe={stripePromise}
+              options={{ clientSecret }}
+            >
+              <EmbeddedCheckout className="w-full" />
+            </EmbeddedCheckoutProvider>
+          ) : (
+            <div className="flex h-64 flex-col items-center justify-center gap-3 text-muted-foreground">
+              <p className="text-sm">No se pudo cargar el formulario de pago.</p>
+              <button
+                className="text-xs underline hover:text-foreground"
+                onClick={() => { fetchedKey.current = ""; fetchClientSecret(currency); }}
+              >
+                Reintentar
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Fine print */}
         <div className="border-t border-border bg-muted/20 px-5 py-2.5 text-center">
-          <p className="text-[10px] leading-relaxed text-muted-foreground/70">
-            Al continuar inicias una suscripción mensual recurrente de {curr.monthlyLabel}/mes tras el período de prueba.{" "}
-            <Link href="/legal/subscription" className="underline underline-offset-2 hover:text-foreground/70">
+          <p className="text-[10px] leading-relaxed text-muted-foreground/60">
+            Suscripción mensual recurrente de {curr.monthlyLabel}/mes tras la prueba.{" "}
+            <Link href="/legal/subscription" className="underline underline-offset-2 hover:text-foreground/60">
               Ver términos
             </Link>
           </p>

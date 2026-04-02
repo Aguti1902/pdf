@@ -90,6 +90,70 @@ export async function createCheckoutSession({
   });
 }
 
+/**
+ * Creates an embedded checkout session (ui_mode: 'embedded').
+ * Returns the client_secret needed by @stripe/react-stripe-js EmbeddedCheckout.
+ */
+export async function createEmbeddedCheckoutSession({
+  customerId,
+  priceId,
+  trialFeePriceId,
+  trialDays,
+  returnUrl,
+  metadata,
+  currencyPricing,
+}: {
+  customerId:       string;
+  priceId:          string;
+  trialFeePriceId?: string;
+  trialDays?:       number;
+  returnUrl:        string;
+  metadata?:        Record<string, string>;
+  currencyPricing?: { currency: string; trialAmount: number; monthlyAmount: number };
+}) {
+  const subscriptionLineItem = currencyPricing
+    ? {
+        price_data: {
+          currency:     currencyPricing.currency.toLowerCase(),
+          product_data: { name: "PDFCraft — Monthly Subscription" },
+          recurring:    { interval: "month" as const },
+          unit_amount:  Math.round(currencyPricing.monthlyAmount * 100),
+        },
+        quantity: 1,
+      }
+    : { price: priceId, quantity: 1 };
+
+  const trialFeeItem = currencyPricing
+    ? [{
+        price_data: {
+          currency:     currencyPricing.currency.toLowerCase(),
+          product_data: { name: `PDFCraft — ${trialDays ?? 2}-Day Trial` },
+          unit_amount:  Math.round(currencyPricing.trialAmount * 100),
+        },
+        quantity: 1,
+      }]
+    : trialFeePriceId
+    ? [{ price: trialFeePriceId, quantity: 1 }]
+    : [];
+
+  return stripe.checkout.sessions.create({
+    customer:             customerId,
+    mode:                 "subscription",
+    ui_mode:              "embedded",
+    return_url:           returnUrl,
+    payment_method_types: ["card"],
+    line_items:           [subscriptionLineItem],
+    ...(trialFeeItem.length > 0 && { add_invoice_items: trialFeeItem }),
+    subscription_data: {
+      trial_period_days: trialDays,
+      metadata:          metadata ?? {},
+    },
+    billing_address_collection: "required",
+    customer_update:            { address: "auto" },
+    locale:                     "auto",
+  });
+}
+
 export async function createCustomerPortalSession(customerId: string, returnUrl: string) {
   return stripe.billingPortal.sessions.create({ customer: customerId, return_url: returnUrl });
 }
