@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 const mockUser = { name: "Alex Johnson", email: "agutierrezgomez00@gmail.com", subscriptionStatus: "trialing" };
 
 const quickActions = [
-  { icon: FileText,  label: "Edit PDF",    desc: "Add text, images and annotations",  href: "/editor",    color: "bg-[#e63946]/10 text-[#e63946]" },
+  { icon: FileText,  label: "Edit PDF",    desc: "Add text, images and annotations",  href: "/editor",    color: "bg-[#2563EB]/10 text-[#2563EB]" },
   { icon: Upload,    label: "Upload PDF",  desc: "Upload a PDF from your device",      href: "/editor",    color: "bg-blue-50 text-blue-600" },
   { icon: Merge,     label: "Merge PDFs",  desc: "Combine multiple PDFs into one",     href: "/merge-pdf", color: "bg-purple-50 text-purple-600" },
   { icon: Scissors,  label: "Split PDF",   desc: "Split a PDF into separate files",    href: "/split-pdf", color: "bg-orange-50 text-orange-600" },
@@ -31,9 +31,9 @@ export default function NewDocumentPage() {
         <div className="px-8 py-8 max-w-3xl">
           {/* Upload drop zone */}
           <Link href="/editor"
-            className="flex flex-col items-center justify-center gap-4 rounded-xl border-2 border-dashed border-neutral-200 bg-neutral-50 p-12 text-center hover:border-[#e63946]/50 hover:bg-[#e63946]/5 transition-all group cursor-pointer">
-            <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-[#e63946]/10 group-hover:bg-[#e63946]/20 transition-colors">
-              <Upload className="h-7 w-7 text-[#e63946]" />
+            className="flex flex-col items-center justify-center gap-4 rounded-xl border-2 border-dashed border-neutral-200 bg-neutral-50 p-12 text-center hover:border-[#2563EB]/50 hover:bg-[#2563EB]/5 transition-all group cursor-pointer">
+            <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-[#2563EB]/10 group-hover:bg-[#2563EB]/20 transition-colors">
+              <Upload className="h-7 w-7 text-[#2563EB]" />
             </div>
             <div>
               <p className="text-base font-semibold text-neutral-900">Upload a PDF</p>

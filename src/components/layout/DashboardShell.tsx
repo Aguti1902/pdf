@@ -37,7 +37,7 @@ export function DashboardShell({ children, user }: DashboardShellProps) {
       <aside className="flex w-[168px] shrink-0 flex-col bg-[#111111] text-white">
         {/* Logo */}
         <div className="flex items-center gap-2 px-5 py-5">
-          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-[#e63946]">
+          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-[#2563EB]">
             <FileText className="h-4 w-4 text-white" />
           </div>
           <span className="font-bold text-sm tracking-tight">PDFCraft</span>

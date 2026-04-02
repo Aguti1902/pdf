@@ -97,6 +97,10 @@ export function EditorLayout() {
   const [showSignModal, setShowSignModal] = useState(false);
   const [userEmail,     setUserEmail]     = useState("");
   const [userName,      setUserName]      = useState("");
+  const [isPremiumReal, setIsPremiumReal] = useState(false);
+  const [pendingAction, setPendingAction] = useState<"save" | "download" | null>(null);
+  const [docId,         setDocId]         = useState<string | null>(null);
+  const [isSaving,      setIsSaving]      = useState(false);
 
   // Refs
   const isMouseDown        = useRef(false);
@@ -112,7 +116,35 @@ export function EditorLayout() {
   const imageInputRef   = useRef<HTMLInputElement>(null);
   const pendingImagePos = useRef<{x:number;y:number} | null>(null);
 
-  const isPremium = false;
+  const isPremium = isPremiumReal;
+
+  // Check subscription status on mount
+  const checkSubscription = useCallback(async () => {
+    try {
+      const res = await fetch("/api/subscription");
+      if (res.ok) {
+        const data = await res.json();
+        setIsPremiumReal(data.isPremium === true);
+      }
+    } catch { /* offline */ }
+  }, []);
+
+  // Also fetch current user on mount
+  const fetchMe = useCallback(async () => {
+    try {
+      const res = await fetch("/api/auth/me");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.user) {
+          setUserEmail(data.user.email);
+          setUserName(data.user.name ?? "");
+        }
+      }
+    } catch { /* offline */ }
+  }, []);
+
+  // Run on mount
+  useState(() => { checkSubscription(); fetchMe(); });
 
   // ── History ──────────────────────────────────────────────────────────────────
   const commit = useCallback((next: Annotation[], selectId?: string) => {
@@ -311,15 +343,69 @@ export function EditorLayout() {
     goToNextPage();
   };
 
+  // ── Save document to dashboard ──────────────────────────────────────────────
+  const saveDocument = useCallback(async () => {
+    if (!pdfFile || !pdfUrl) return;
+    if (!userEmail) { setPendingAction("save"); setShowAuth(true); return; }
+    if (!isPremium) { setPendingAction("save"); setShowPaywall(true); return; }
+
+    setIsSaving(true);
+    try {
+      // Read the PDF as base64
+      const arrayBuf = await pdfFile.arrayBuffer();
+      const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuf)));
+
+      const res = await fetch("/api/documents", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id:          docId ?? undefined,
+          title:       fileName,
+          fileData:    base64,
+          fileSize:    pdfFile.size,
+          annotations: annotations,
+          pageCount:   editorState.totalPages,
+        }),
+      });
+      if (res.status === 402) { setShowPaywall(true); return; }
+      if (!res.ok) throw new Error();
+      const { document: doc } = await res.json();
+      setDocId(doc.id);
+      // Show success — dynamic import to avoid SSR issues with sonner
+      const { toast } = await import("sonner");
+      toast.success("Document saved to your dashboard");
+    } catch {
+      const { toast } = await import("sonner");
+      toast.error("Could not save document. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
+  }, [pdfFile, pdfUrl, userEmail, isPremium, fileName, docId, annotations, editorState.totalPages]);
+
   // ── Download / Share flow: Auth → Paywall ─────────────────────────────────────
   const startDownload = () => {
-    if (!isPremium) setShowAuth(true);
+    if (!pdfUrl) return;
+    if (!userEmail) { setPendingAction("download"); setShowAuth(true); return; }
+    if (!isPremium) { setPendingAction("download"); setShowPaywall(true); return; }
+    // Actual download
+    const a = document.createElement("a");
+    a.href = pdfUrl;
+    a.download = fileName;
+    a.click();
   };
-  const onAuthSuccess = (email: string, name: string) => {
+
+  const onAuthSuccess = async (email: string, name: string) => {
     setUserEmail(email);
     setUserName(name);
     setShowAuth(false);
-    setShowPaywall(true);
+    // Re-check subscription
+    await checkSubscription();
+    const { toast } = await import("sonner");
+    toast.success(`Welcome, ${name}!`);
+    // Continue pending action
+    if (pendingAction === "download") { setPendingAction(null); setShowPaywall(true); }
+    else if (pendingAction === "save") { setPendingAction(null); setTimeout(() => saveDocument(), 300); }
+    else setPendingAction(null);
   };
 
   const cursor = editorState.activeTool === "pointer" && selectedId ? "move"
@@ -348,11 +434,11 @@ export function EditorLayout() {
           <Upload className="h-3.5 w-3.5" />
           <span className="hidden sm:inline">Open PDF</span>
         </Button>
-        <Button variant="outline" size="sm" className="h-8 gap-1.5" onClick={startDownload}>
-          <Share2 className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">Share</span>
+        <Button variant="outline" size="sm" className="h-8 gap-1.5" onClick={saveDocument} disabled={isSaving || !pdfUrl}>
+          <Save className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline">{isSaving ? "Saving..." : "Save"}</span>
         </Button>
-        <Button size="sm" className="h-8 gap-1.5 font-semibold" onClick={startDownload}>
+        <Button size="sm" className="h-8 gap-1.5 font-semibold" onClick={startDownload} disabled={!pdfUrl}>
           <Download className="h-3.5 w-3.5" /> Download
         </Button>
         <input ref={fileInputRef} type="file" accept=".pdf,application/pdf" className="hidden"
@@ -417,9 +503,9 @@ export function EditorLayout() {
             {pageRotation > 0 && <Badge variant="secondary" className="ml-1 text-xs">{pageRotation}° rotated</Badge>}
             {deletedPages.size > 0 && <Badge variant="secondary" className="text-xs">{deletedPages.size} page{deletedPages.size > 1 ? "s" : ""} deleted</Badge>}
             <div className="flex-1" />
-            <Button variant="ghost" size="icon" className="h-7 w-7" title="Save">
-              <Save className="h-3.5 w-3.5" />
-            </Button>
+            {userEmail && (
+              <span className="text-xs text-muted-foreground hidden md:inline">{userEmail}</span>
+            )}
           </div>
 
           {/* Canvas area */}

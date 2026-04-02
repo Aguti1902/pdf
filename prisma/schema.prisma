@@ -26,6 +26,7 @@ model User {
 
   // Relations
   subscription      Subscription?
+  documents         Document[]
   files             File[]
   sessions          EditSession[]
   conversions       Conversion[]
@@ -74,6 +75,25 @@ enum SubscriptionStatus {
 enum PlanType {
   monthly
   yearly
+}
+
+// ─── Saved Documents (editor sessions) ──────────────────────────────────────
+
+model Document {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title       String
+  fileData    String   // base64 of the original PDF (for now; replace with S3 URL later)
+  fileSize    Int      // in bytes
+  annotations Json     @default("[]")
+  pageCount   Int      @default(1)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("documents")
 }
 
 // ─── Files ──────────────────────────────────────────────────────────────────

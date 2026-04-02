@@ -23,20 +23,34 @@ export function AuthModal({ open, onClose, onSuccess }: AuthModalProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    if (!email || !password) { setError("Please fill in all fields."); return; }
-    if (tab === "register" && !name.trim()) { setError("Please enter your name."); return; }
+    if (!email || !password) { setError("Por favor rellena todos los campos."); return; }
+    if (tab === "register" && !name.trim()) { setError("Por favor escribe tu nombre."); return; }
     setLoading(true);
-    await new Promise(r => setTimeout(r, 900));
-    setLoading(false);
-    onSuccess(email, name || email.split("@")[0]);
+    try {
+      const endpoint = tab === "register" ? "/api/auth/register" : "/api/auth/login";
+      const body = tab === "register"
+        ? { name, email, password }
+        : { email, password };
+
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+
+      if (!res.ok) { setError(data.error ?? "Something went wrong."); setLoading(false); return; }
+
+      onSuccess(data.user.email, data.user.name ?? email.split("@")[0]);
+    } catch {
+      setError("Connection error. Please try again.");
+      setLoading(false);
+    }
   };
 
-  const handleGoogle = async () => {
-    setLoading(true);
-    await new Promise(r => setTimeout(r, 600));
-    setLoading(false);
-    // In real implementation: get email from Google OAuth provider
-    onSuccess("google@user.com", "Google User");
+  // Google OAuth placeholder — would redirect to OAuth provider
+  const handleGoogle = () => {
+    setError("Google sign-in coming soon. Please use email for now.");
   };
 
   return (
@@ -46,13 +60,13 @@ export function AuthModal({ open, onClose, onSuccess }: AuthModalProps) {
         <div className="relative border-b px-6 py-5 text-center">
           <button onClick={onClose} className="absolute right-4 top-4 rounded-lg p-1 text-muted-foreground hover:bg-muted hover:text-foreground">✕</button>
           <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-primary">
-            <span className="text-lg font-bold text-primary-foreground">D</span>
+            <span className="text-lg font-bold text-primary-foreground">P</span>
           </div>
           <h2 className="text-lg font-bold">
             {tab === "register" ? "Create your account" : "Welcome back"}
           </h2>
           <p className="mt-0.5 text-sm text-muted-foreground">
-            {tab === "register" ? "Start your 7-day trial for just 0,50 €" : "Sign in to continue editing"}
+            {tab === "register" ? "Start your 7-day trial for just 0,50 €" : "Sign in to continue"}
           </p>
         </div>
 
@@ -60,8 +74,7 @@ export function AuthModal({ open, onClose, onSuccess }: AuthModalProps) {
           {/* Google */}
           <button
             onClick={handleGoogle}
-            disabled={loading}
-            className="flex w-full items-center justify-center gap-3 rounded-xl border bg-background px-4 py-2.5 text-sm font-medium transition-all hover:bg-muted disabled:opacity-60"
+            className="flex w-full items-center justify-center gap-3 rounded-xl border bg-background px-4 py-2.5 text-sm font-medium transition-all hover:bg-muted"
           >
             <svg className="h-4 w-4" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -81,8 +94,8 @@ export function AuthModal({ open, onClose, onSuccess }: AuthModalProps) {
           {/* Tabs */}
           <div className="flex rounded-lg border p-0.5">
             {(["register", "login"] as const).map(t => (
-              <button key={t} onClick={() => setTab(t)}
-                className={cn("flex-1 rounded-md py-1.5 text-sm font-medium transition-all capitalize",
+              <button key={t} onClick={() => { setTab(t); setError(""); }}
+                className={cn("flex-1 rounded-md py-1.5 text-sm font-medium transition-all",
                   tab === t ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>
                 {t === "register" ? "Sign up" : "Sign in"}
               </button>
@@ -92,19 +105,16 @@ export function AuthModal({ open, onClose, onSuccess }: AuthModalProps) {
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-3">
             {tab === "register" && (
-              <input
-                type="text" placeholder="Your name" value={name} onChange={e => setName(e.target.value)}
-                className="w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-              />
+              <input type="text" placeholder="Your name" value={name}
+                onChange={e => setName(e.target.value)}
+                className="w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
             )}
-            <input
-              type="email" placeholder="Email address" value={email} onChange={e => setEmail(e.target.value)}
-              className="w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-            />
-            <input
-              type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)}
-              className="w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-            />
+            <input type="email" placeholder="Email address" value={email}
+              onChange={e => setEmail(e.target.value)}
+              className="w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+            <input type="password" placeholder="Password (min. 8 characters)" value={password}
+              onChange={e => setPassword(e.target.value)}
+              className="w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
 
             {error && <p className="rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive">{error}</p>}
 
@@ -121,7 +131,7 @@ export function AuthModal({ open, onClose, onSuccess }: AuthModalProps) {
           {tab === "register" && (
             <p className="text-center text-[11px] text-muted-foreground leading-relaxed">
               By creating an account you agree to our{" "}
-              <a href="/legal/terms" className="underline hover:text-foreground">Terms</a> and{" "}
+              <a href="/legal/terms" className="underline hover:text-foreground">Terms</a>{" "}and{" "}
               <a href="/legal/privacy" className="underline hover:text-foreground">Privacy Policy</a>.
               After the 7-day trial (0,50 €), your subscription renews at 49,90 €/month.
             </p>
