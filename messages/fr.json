@@ -127,7 +127,9 @@
     "faq3Q": "Quand dois-je annuler pour éviter d'être débité ?",
     "faq3A": "Vous devez annuler au moins 1 heure avant la fin de la période d'essai pour éviter d'être débité des 49,90 €/mois. Vous pouvez annuler facilement depuis votre tableau de bord.",
     "faq4Q": "Puis-je demander un remboursement si j'ai manqué la date d'annulation ?",
-    "faq4A": "Les 0,50 € de l'essai ne sont pas remboursables. Pour les charges mensuelles, vous pouvez contacter le support dans les 3 jours suivant le débit si aucun document n'a été téléchargé. Contact : support@pdfcraft.online"
+    "faq4A": "Les 0,50 € de l'essai ne sont pas remboursables. Pour les charges mensuelles, vous pouvez contacter le support dans les 3 jours suivant le débit si aucun document n'a été téléchargé. Contact : support@pdfcraft.online",
+    "redirecting": "Redirection…",
+    "subscriptionTerms": "Conditions d'abonnement"
   },
   "pricing": {
     "title": "Tarification simple et transparente",

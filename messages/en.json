@@ -127,7 +127,9 @@
     "faq3Q": "When should I cancel to avoid being charged the monthly subscription fee?",
     "faq3A": "You must cancel at least 1 hour before the trial period ends to avoid being charged the monthly subscription fee of 49,90 €. You can cancel easily from your account dashboard under Billing settings.",
     "faq4Q": "Can I request a refund if I have missed the cancellation deadline?",
-    "faq4A": "The 0,50 € trial fee is non-refundable. For monthly charges, you may contact support within 3 days of the charge if no documents were downloaded. We review refund requests case by case. Contact: support@pdfcraft.online"
+    "faq4A": "The 0,50 € trial fee is non-refundable. For monthly charges, you may contact support within 3 days of the charge if no documents were downloaded. We review refund requests case by case. Contact: support@pdfcraft.online",
+    "redirecting": "Redirecting…",
+    "subscriptionTerms": "Subscription terms"
   },
   "pricing": {
     "title": "Simple, transparent pricing",

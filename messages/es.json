@@ -127,7 +127,9 @@
     "faq3Q": "¿Cuándo debo cancelar para evitar que se me cobre la tarifa mensual?",
     "faq3A": "Debes cancelar al menos 1 hora antes de que finalice el período de prueba para evitar que se te cobre la tarifa mensual de 49,90 €. Puedes cancelar fácilmente desde tu panel de control en Configuración de facturación.",
     "faq4Q": "¿Puedo solicitar un reembolso si perdí el plazo de cancelación?",
-    "faq4A": "La tarifa de prueba de 0,50 € no es reembolsable. Para cargos mensuales, puedes contactar con soporte dentro de los 3 días siguientes al cargo si no se descargaron documentos. Revisamos las solicitudes de reembolso caso por caso. Contacto: support@pdfcraft.online"
+    "faq4A": "La tarifa de prueba de 0,50 € no es reembolsable. Para cargos mensuales, puedes contactar con soporte dentro de los 3 días siguientes al cargo si no se descargaron documentos. Revisamos las solicitudes de reembolso caso por caso. Contacto: support@pdfcraft.online",
+    "redirecting": "Redirigiendo…",
+    "subscriptionTerms": "Términos de suscripción"
   },
   "pricing": {
     "title": "Precios simples y transparentes",

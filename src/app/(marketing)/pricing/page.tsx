@@ -4,7 +4,8 @@ import { useState } from "react";
 import { CheckCircle2, ChevronDown, ChevronUp, Lock } from "lucide-react";
 import Link from "next/link";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { PRICING } from "@/config/pricing";
+import { PRICING, CURRENCIES, DEFAULT_CURRENCY, type CurrencyCode } from "@/config/pricing";
+import { CurrencySelector } from "@/components/checkout/CurrencySelector";
 
 function FaqItem({ question, answer }: { question: string; answer: string }) {
   const [open, setOpen] = useState(false);
@@ -39,6 +40,25 @@ const checkFeats = ["feat1", "feat2", "feat3", "feat4", "feat5", "feat6"] as con
 export default function PricingPage() {
   const { t, messages } = useLanguage();
   const p = messages ? t("pricingPage") : null;
+  const [currency, setCurrency] = useState<CurrencyCode>(DEFAULT_CURRENCY);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const curr = CURRENCIES[currency];
+
+  const handleCheckout = async () => {
+    setCheckoutLoading(true);
+    try {
+      const res = await fetch("/api/stripe/create-checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currency }),
+      });
+      if (!res.ok) throw new Error();
+      const { url } = await res.json();
+      if (url) window.location.href = url;
+    } catch {
+      setCheckoutLoading(false);
+    }
+  };
 
   const tableRows = [
     { label: p?.row1Label ?? "Price and renewal", trial: p?.row1Trial ?? "0,50 € (Automatic renewal at 49,90 €/month)", monthly: p?.row1Monthly ?? "49,90 € per month", isText: true },
@@ -72,10 +92,7 @@ export default function PricingPage() {
           <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
             {/* Currency selector */}
             <div className="flex justify-center border-b border-border px-6 py-3">
-              <div className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-sm font-medium">
-                {p?.currency ?? "EUR"}
-                <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-              </div>
+              <CurrencySelector value={currency} onChange={setCurrency} />
             </div>
 
             {/* Today / Then columns */}
@@ -85,10 +102,10 @@ export default function PricingPage() {
                   {p?.today ?? "Today"}
                 </p>
                 <p className="text-4xl font-extrabold tracking-tight text-foreground">
-                  {PRICING.trial.label}
+                  {curr.trialLabel}
                 </p>
                 <p className="mt-1.5 text-xs text-muted-foreground">
-                  {p?.trialLabel ?? "7-day trial"}
+                  {p?.trialLabel ?? `${PRICING.trial.days}-day trial`}
                 </p>
               </div>
               <div className="flex flex-col items-center px-6 py-8">
@@ -96,7 +113,7 @@ export default function PricingPage() {
                   {p?.then ?? "Then"}
                 </p>
                 <p className="text-4xl font-extrabold tracking-tight text-foreground">
-                  {PRICING.monthly.label}
+                  {curr.monthlyLabel}
                 </p>
                 <p className="mt-1.5 text-xs text-muted-foreground">
                   {p?.monthLabel ?? "Month"}
@@ -124,13 +141,16 @@ export default function PricingPage() {
 
             {/* CTA */}
             <div className="border-t border-border px-6 pb-8 pt-5 text-center">
-              <Link
-                href="/checkout"
-                className="inline-flex w-full max-w-xs items-center justify-center gap-2 rounded-xl bg-foreground px-6 py-3.5 text-sm font-bold text-background transition hover:opacity-90"
+              <button
+                onClick={handleCheckout}
+                disabled={checkoutLoading}
+                className="inline-flex w-full max-w-xs items-center justify-center gap-2 rounded-xl bg-foreground px-6 py-3.5 text-sm font-bold text-background transition hover:opacity-90 disabled:opacity-60"
               >
                 <Lock className="h-4 w-4" />
-                {p?.startBtn ?? "Start 7-day trial"}
-              </Link>
+                {checkoutLoading
+                  ? (p?.redirecting ?? "Redirecting…")
+                  : (p?.startBtn ?? `Start ${PRICING.trial.days}-day trial`)}
+              </button>
               <p className="mt-3 text-xs text-muted-foreground underline-offset-2">
                 <Link href="/dashboard" className="hover:underline">
                   {p?.cancelAnytime ?? "Cancel anytime"}

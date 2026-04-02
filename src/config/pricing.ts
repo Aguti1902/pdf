@@ -1,19 +1,40 @@
+// ─── Multi-currency pricing ──────────────────────────────────────────────────
+// Amounts in the currency's major unit (e.g. EUR cents → 0.50 → 50 on Stripe)
+export const CURRENCIES = {
+  EUR: { symbol: "€", flag: "🇪🇺", trialAmount: 0.50, monthlyAmount: 49.90,
+         trialLabel: "0,50 €",   monthlyLabel: "49,90 €"   },
+  USD: { symbol: "$", flag: "🇺🇸", trialAmount: 0.50, monthlyAmount: 49.90,
+         trialLabel: "$0.50",    monthlyLabel: "$49.90"    },
+  GBP: { symbol: "£", flag: "🇬🇧", trialAmount: 0.50, monthlyAmount: 44.90,
+         trialLabel: "£0.50",    monthlyLabel: "£44.90"    },
+  BRL: { symbol: "R$", flag: "🇧🇷", trialAmount: 2.99, monthlyAmount: 249.90,
+         trialLabel: "R$2,99",   monthlyLabel: "R$249,90"  },
+  MXN: { symbol: "$", flag: "🇲🇽", trialAmount: 9.99, monthlyAmount: 999.00,
+         trialLabel: "$9,99 MXN", monthlyLabel: "$999 MXN" },
+  CAD: { symbol: "CA$", flag: "🇨🇦", trialAmount: 0.99, monthlyAmount: 67.90,
+         trialLabel: "CA$0.99",  monthlyLabel: "CA$67.90"  },
+  AUD: { symbol: "A$", flag: "🇦🇺", trialAmount: 0.99, monthlyAmount: 79.90,
+         trialLabel: "A$0.99",   monthlyLabel: "A$79.90"   },
+} as const;
+
+export type CurrencyCode = keyof typeof CURRENCIES;
+export const DEFAULT_CURRENCY: CurrencyCode = "EUR";
+
+// ─── Legacy PRICING (kept for backwards compat) ───────────────────────────────
 export const PRICING = {
   trial: {
-    price:    0.50,
+    price:    CURRENCIES.EUR.trialAmount,
     currency: "EUR",
-    label:    "0,50 €",
+    label:    CURRENCIES.EUR.trialLabel,
     days:     7,
-    // One-time 0,50€ fee charged at checkout start
     stripePriceId: process.env.NEXT_PUBLIC_STRIPE_TRIAL_FEE_PRICE_ID
       ?? "price_1THbL5JB5YYhafsNwzOUQWfl",
   },
   monthly: {
-    price:           49.90,
+    price:           CURRENCIES.EUR.monthlyAmount,
     currency:        "EUR",
-    label:           "49,90 €",
+    label:           CURRENCIES.EUR.monthlyLabel,
     billingInterval: "month",
-    // Recurring 49,90€/month — billed after 7-day trial
     stripePriceId: process.env.NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID
       ?? "price_1THbL4JB5YYhafsNF5zeDuis",
   },
