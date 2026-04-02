@@ -87,8 +87,8 @@ export function Hero() {
           >
             <FileUploader
               onUploadComplete={handleUpload}
-              label="Drop your PDF here to get started"
-              description="or click to browse · No account needed"
+              label={hero?.dropLabel}
+              description={hero?.dropDesc}
               className="shadow-sm"
             />
           </motion.div>
@@ -118,15 +118,15 @@ export function Hero() {
           >
             <div className="flex items-center gap-2">
               <Users className="h-4 w-4 text-primary" />
-              <span><strong className="text-foreground">500K+</strong> users</span>
+              <span><strong className="text-foreground">500K+</strong> {hero?.users ?? "users"}</span>
             </div>
             <div className="flex items-center gap-2">
               <FileCheck className="h-4 w-4 text-primary" />
-              <span><strong className="text-foreground">10M+</strong> files processed</span>
+              <span><strong className="text-foreground">10M+</strong> {hero?.filesProcessed ?? "files processed"}</span>
             </div>
             <div className="flex items-center gap-2">
               <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-              <span><strong className="text-foreground">4.8/5</strong> rating</span>
+              <span><strong className="text-foreground">4.8/5</strong> {hero?.rating ?? "rating"}</span>
             </div>
           </motion.div>
         </div>
