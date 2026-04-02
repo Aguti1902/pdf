@@ -13,27 +13,32 @@ import type { Tool } from "@/config/tools";
 import { getRelatedTools, EDITOR_TOOL_MAP, COMING_SOON_TOOLS, CLIENT_PROCESSOR_TOOLS } from "@/config/tools";
 import type { UploadedFile } from "@/types";
 import * as Icons from "lucide-react";
-import { PaywallModal } from "@/components/checkout/PaywallModal";
 import dynamic from "next/dynamic";
 
-// Lazy-load processors to avoid bundling pdf-lib on every page
-const MergePdfProcessor    = dynamic(() => import("./processors/MergePdfProcessor").then(m => ({ default: m.MergePdfProcessor })), { ssr: false });
-const SplitPdfProcessor    = dynamic(() => import("./processors/SplitPdfProcessor").then(m => ({ default: m.SplitPdfProcessor })), { ssr: false });
-const CompressPdfProcessor = dynamic(() => import("./processors/CompressPdfProcessor").then(m => ({ default: m.CompressPdfProcessor })), { ssr: false });
+// Lazy-load processors to avoid bundling heavy libs on every page
+const MergePdfProcessor     = dynamic(() => import("./processors/MergePdfProcessor").then(m => ({ default: m.MergePdfProcessor })), { ssr: false });
+const SplitPdfProcessor     = dynamic(() => import("./processors/SplitPdfProcessor").then(m => ({ default: m.SplitPdfProcessor })), { ssr: false });
+const CompressPdfProcessor  = dynamic(() => import("./processors/CompressPdfProcessor").then(m => ({ default: m.CompressPdfProcessor })), { ssr: false });
 const ReorderPagesProcessor = dynamic(() => import("./processors/ReorderPagesProcessor").then(m => ({ default: m.ReorderPagesProcessor })), { ssr: false });
-const PdfToImageProcessor  = dynamic(() => import("./processors/PdfToImageProcessor").then(m => ({ default: m.PdfToImageProcessor })), { ssr: false });
-const ImageToPdfProcessor  = dynamic(() => import("./processors/ImageToPdfProcessor").then(m => ({ default: m.ImageToPdfProcessor })), { ssr: false });
+const PdfToImageProcessor   = dynamic(() => import("./processors/PdfToImageProcessor").then(m => ({ default: m.PdfToImageProcessor })), { ssr: false });
+const ImageToPdfProcessor   = dynamic(() => import("./processors/ImageToPdfProcessor").then(m => ({ default: m.ImageToPdfProcessor })), { ssr: false });
+const WordToPdfProcessor    = dynamic(() => import("./processors/WordToPdfProcessor").then(m => ({ default: m.WordToPdfProcessor })), { ssr: false });
+const ExcelToPdfProcessor   = dynamic(() => import("./processors/ExcelToPdfProcessor").then(m => ({ default: m.ExcelToPdfProcessor })), { ssr: false });
+const PdfToWordProcessor    = dynamic(() => import("./processors/PdfToWordProcessor").then(m => ({ default: m.PdfToWordProcessor })), { ssr: false });
 
 function getProcessor(slug: string): React.ReactNode {
   switch (slug) {
-    case "merge-pdf":    return <MergePdfProcessor />;
-    case "split-pdf":    return <SplitPdfProcessor />;
-    case "compress-pdf": return <CompressPdfProcessor />;
+    case "merge-pdf":     return <MergePdfProcessor />;
+    case "split-pdf":     return <SplitPdfProcessor />;
+    case "compress-pdf":  return <CompressPdfProcessor />;
     case "reorder-pages": return <ReorderPagesProcessor />;
-    case "pdf-to-jpg":   return <PdfToImageProcessor format="jpeg" />;
-    case "pdf-to-png":   return <PdfToImageProcessor format="png" />;
-    case "jpg-to-pdf":   return <ImageToPdfProcessor />;
-    default:             return null;
+    case "pdf-to-jpg":    return <PdfToImageProcessor format="jpeg" />;
+    case "pdf-to-png":    return <PdfToImageProcessor format="png" />;
+    case "jpg-to-pdf":    return <ImageToPdfProcessor />;
+    case "word-to-pdf":   return <WordToPdfProcessor />;
+    case "excel-to-pdf":  return <ExcelToPdfProcessor />;
+    case "pdf-to-word":   return <PdfToWordProcessor />;
+    default:              return null;
   }
 }
 
@@ -43,7 +48,6 @@ interface ToolPageProps {
 
 export function ToolPage({ tool }: ToolPageProps) {
   const [uploadedFile, setUploadedFile] = useState<(UploadedFile & { _rawFile?: File }) | null>(null);
-  const [showPaywall, setShowPaywall] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
   const router = useRouter();
   const relatedTools = getRelatedTools(tool.id);
@@ -75,8 +79,6 @@ export function ToolPage({ tool }: ToolPageProps) {
         router.push(`/editor?fileId=${uploadedFile.id}&tool=${editorAction}`);
       };
       reader.readAsDataURL(uploadedFile._rawFile);
-    } else {
-      setShowPaywall(true);
     }
   };
 
@@ -274,7 +276,6 @@ export function ToolPage({ tool }: ToolPageProps) {
         </section>
       </div>
 
-      <PaywallModal open={showPaywall} onClose={() => setShowPaywall(false)} toolName={tool.name} />
     </>
   );
 }

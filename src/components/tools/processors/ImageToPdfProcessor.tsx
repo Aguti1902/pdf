@@ -4,9 +4,9 @@ import { useState, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { PaywallModal } from "@/components/checkout/PaywallModal";
+import { DownloadGateModals } from "@/components/checkout/DownloadGateModals";
 import { imagesToPdf } from "@/lib/pdf-processing/imageToPdf";
-import { useSubscriptionDownload } from "@/hooks/useSubscriptionDownload";
+import { useDownloadGate } from "@/hooks/useDownloadGate";
 import { Upload, X, Loader2, Download, CheckCircle2, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 
@@ -16,7 +16,7 @@ export function ImageToPdfProcessor() {
   const [images, setImages] = useState<ImageItem[]>([]);
   const [result, setResult] = useState<Blob | null>(null);
   const [processing, setProcessing] = useState(false);
-  const { requestDownload, showPaywall, closePaywall } = useSubscriptionDownload();
+  const gate = useDownloadGate();
 
   const onDrop = useCallback((accepted: File[]) => {
     setResult(null);
@@ -94,7 +94,7 @@ export function ImageToPdfProcessor() {
             <span className="font-semibold">PDF created!</span>
             <Badge variant="secondary">{(result.size/1024/1024).toFixed(1)} MB · {images.length} pages</Badge>
           </div>
-          <Button size="lg" className="w-full gap-2" onClick={() => requestDownload(result, "images.pdf")}>
+          <Button size="lg" className="w-full gap-2" onClick={() => gate.request(result, "images.pdf")}>
             <Download className="h-4 w-4" /> Download PDF
           </Button>
           <Button variant="outline" size="sm" className="w-full" onClick={() => { setResult(null); setImages([]); }}>Convert other images</Button>
@@ -105,7 +105,7 @@ export function ImageToPdfProcessor() {
         </Button>
       )}
 
-      <PaywallModal open={showPaywall} onClose={closePaywall} toolName="JPG to PDF" />
+      <DownloadGateModals gate={gate} toolName="JPG to PDF" />
     </div>
   );
 }

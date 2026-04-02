@@ -4,10 +4,9 @@ import { useState, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { PaywallModal } from "@/components/checkout/PaywallModal";
+import { DownloadGateModals } from "@/components/checkout/DownloadGateModals";
 import { splitPdfAllPages, splitPdfByPages } from "@/lib/pdf-processing/split";
-import { useSubscriptionDownload } from "@/hooks/useSubscriptionDownload";
-import { triggerDownload } from "@/lib/pdf-processing/download";
+import { useDownloadGate } from "@/hooks/useDownloadGate";
 import { Upload, Loader2, Download, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import JSZip from "jszip";
@@ -21,7 +20,7 @@ export function SplitPdfProcessor() {
   const [processing, setProcessing] = useState(false);
   const [done, setDone] = useState(false);
   const [resultBlob, setResultBlob] = useState<Blob | null>(null);
-  const { requestDownload, showPaywall, closePaywall } = useSubscriptionDownload();
+  const gate = useDownloadGate();
 
   const onDrop = useCallback((accepted: File[]) => {
     setFile(accepted[0] ?? null);
@@ -79,7 +78,7 @@ export function SplitPdfProcessor() {
     const filename = mode === "all"
       ? `${file?.name.replace(/\.pdf$/i,"")}_pages.zip`
       : `${file?.name.replace(/\.pdf$/i,"")}_range.pdf`;
-    requestDownload(resultBlob, filename);
+    gate.request(resultBlob, filename);
   };
 
   return (
@@ -140,7 +139,7 @@ export function SplitPdfProcessor() {
         </div>
       )}
 
-      <PaywallModal open={showPaywall} onClose={closePaywall} toolName="Split PDF" />
+      <DownloadGateModals gate={gate} toolName="Split PDF" />
     </div>
   );
 }

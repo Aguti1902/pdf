@@ -4,9 +4,9 @@ import { useState, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { PaywallModal } from "@/components/checkout/PaywallModal";
+import { DownloadGateModals } from "@/components/checkout/DownloadGateModals";
 import { compressPdf } from "@/lib/pdf-processing/compress";
-import { useSubscriptionDownload } from "@/hooks/useSubscriptionDownload";
+import { useDownloadGate } from "@/hooks/useDownloadGate";
 import { Upload, Loader2, Download, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -14,7 +14,7 @@ export function CompressPdfProcessor() {
   const [file, setFile] = useState<File | null>(null);
   const [result, setResult] = useState<Blob | null>(null);
   const [processing, setProcessing] = useState(false);
-  const { requestDownload, showPaywall, closePaywall } = useSubscriptionDownload();
+  const gate = useDownloadGate();
 
   const onDrop = useCallback((accepted: File[]) => {
     setFile(accepted[0] ?? null);
@@ -73,7 +73,7 @@ export function CompressPdfProcessor() {
               </Badge>
             </div>
           </div>
-          <Button size="lg" className="w-full gap-2" onClick={() => requestDownload(result, `compressed_${file.name}`)}>
+          <Button size="lg" className="w-full gap-2" onClick={() => gate.request(result, `compressed_${file.name}`)}>
             <Download className="h-4 w-4" /> Download compressed PDF
           </Button>
           <Button variant="outline" size="sm" className="w-full" onClick={() => { setResult(null); setFile(null); }}>Compress another file</Button>
@@ -86,7 +86,7 @@ export function CompressPdfProcessor() {
             <button onClick={() => setFile(null)} className="text-xs text-muted-foreground hover:text-destructive">Change</button>
           </div>
           <p className="text-xs text-muted-foreground">
-            PDFCraft removes redundant data and optimizes the PDF structure. For scanned PDFs with heavy images, consider reducing image resolution separately.
+            PDFCraft removes redundant data and optimizes the PDF structure.
           </p>
           <Button size="lg" className="w-full gap-2" onClick={handleCompress} disabled={processing}>
             {processing ? <><Loader2 className="h-4 w-4 animate-spin" />Compressing…</> : <>Compress PDF</>}
@@ -94,7 +94,7 @@ export function CompressPdfProcessor() {
         </div>
       )}
 
-      <PaywallModal open={showPaywall} onClose={closePaywall} toolName="Compress PDF" />
+      <DownloadGateModals gate={gate} toolName="Compress PDF" />
     </div>
   );
 }

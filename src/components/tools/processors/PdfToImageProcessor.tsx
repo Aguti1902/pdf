@@ -4,10 +4,9 @@ import { useState, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { PaywallModal } from "@/components/checkout/PaywallModal";
+import { DownloadGateModals } from "@/components/checkout/DownloadGateModals";
 import { pdfToImages, type PageImage } from "@/lib/pdf-processing/pdfToImage";
-import { useSubscriptionDownload } from "@/hooks/useSubscriptionDownload";
-import { triggerDownload } from "@/lib/pdf-processing/download";
+import { useDownloadGate } from "@/hooks/useDownloadGate";
 import { Upload, Loader2, Download, CheckCircle2, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 import JSZip from "jszip";
@@ -19,7 +18,7 @@ export function PdfToImageProcessor({ format }: { format: Format }) {
   const [pages, setPages] = useState<PageImage[]>([]);
   const [processing, setProcessing] = useState(false);
   const [previews, setPreviews] = useState<string[]>([]);
-  const { requestDownload, showPaywall, closePaywall } = useSubscriptionDownload();
+  const gate = useDownloadGate();
 
   const onDrop = useCallback((accepted: File[]) => {
     setFile(accepted[0] ?? null);
@@ -53,18 +52,18 @@ export function PdfToImageProcessor({ format }: { format: Format }) {
   const handleDownloadAll = async () => {
     if (pages.length === 0) return;
     if (pages.length === 1) {
-      requestDownload(pages[0].blob, pages[0].name);
+      gate.request(pages[0].blob, pages[0].name);
       return;
     }
     // Multiple pages → zip
     const zip = new JSZip();
     pages.forEach(p => zip.file(p.name, p.blob));
     const zipBlob = await zip.generateAsync({ type: "blob" });
-    requestDownload(zipBlob, `${file?.name.replace(/\.pdf$/i,"")}_images.zip`);
+    gate.request(zipBlob, `${file?.name.replace(/\.pdf$/i,"")}_images.zip`);
   };
 
   const handleDownloadSingle = (p: PageImage) => {
-    requestDownload(p.blob, p.name);
+    gate.request(p.blob, p.name);
   };
 
   return (
@@ -128,7 +127,7 @@ export function PdfToImageProcessor({ format }: { format: Format }) {
         </div>
       )}
 
-      <PaywallModal open={showPaywall} onClose={closePaywall} toolName={`PDF to ${format.toUpperCase()}`} />
+      <DownloadGateModals gate={gate} toolName={`PDF to ${format.toUpperCase()}`} />
     </div>
   );
 }

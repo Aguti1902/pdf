@@ -4,9 +4,9 @@ import { useState, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { PaywallModal } from "@/components/checkout/PaywallModal";
+import { DownloadGateModals } from "@/components/checkout/DownloadGateModals";
 import { mergePdfs } from "@/lib/pdf-processing/merge";
-import { useSubscriptionDownload } from "@/hooks/useSubscriptionDownload";
+import { useDownloadGate } from "@/hooks/useDownloadGate";
 import { Upload, X, FileText, Loader2, Download, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -16,7 +16,7 @@ export function MergePdfProcessor() {
   const [files, setFiles] = useState<FileItem[]>([]);
   const [result, setResult] = useState<Blob | null>(null);
   const [processing, setProcessing] = useState(false);
-  const { requestDownload, showPaywall, closePaywall } = useSubscriptionDownload();
+  const gate = useDownloadGate();
 
   const onDrop = useCallback((accepted: File[]) => {
     setFiles(prev => [...prev, ...accepted.map(f => ({ id: crypto.randomUUID(), file: f }))]);
@@ -27,7 +27,7 @@ export function MergePdfProcessor() {
     onDrop, accept: { "application/pdf": [".pdf"] }, multiple: true,
   });
 
-  const remove = (id: string) => setFiles(prev => prev.filter(f => f.id !== id));
+  const remove   = (id: string) => setFiles(prev => prev.filter(f => f.id !== id));
   const moveUp   = (i: number) => setFiles(prev => { const a=[...prev]; if(i>0){[a[i-1],a[i]]=[a[i],a[i-1]];} return a; });
   const moveDown = (i: number) => setFiles(prev => { const a=[...prev]; if(i<a.length-1){[a[i],a[i+1]]=[a[i+1],a[i]];} return a; });
 
@@ -74,7 +74,7 @@ export function MergePdfProcessor() {
             <span className="font-semibold">Merge complete!</span>
             <Badge variant="secondary">{(result.size/1024/1024).toFixed(1)} MB</Badge>
           </div>
-          <Button size="lg" className="w-full gap-2" onClick={() => requestDownload(result, "merged.pdf")}>
+          <Button size="lg" className="w-full gap-2" onClick={() => gate.request(result, "merged.pdf")}>
             <Download className="h-4 w-4" /> Download merged PDF
           </Button>
           <Button variant="outline" size="sm" className="w-full" onClick={() => setResult(null)}>Merge other files</Button>
@@ -85,7 +85,7 @@ export function MergePdfProcessor() {
         </Button>
       )}
 
-      <PaywallModal open={showPaywall} onClose={closePaywall} toolName="Merge PDF" />
+      <DownloadGateModals gate={gate} toolName="Merge PDF" />
     </div>
   );
 }

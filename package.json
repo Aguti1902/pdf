@@ -42,10 +42,15 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
+    "docx": "^9.6.1",
     "framer-motion": "^12.5.0",
+    "html2canvas": "^1.4.1",
     "jose": "^6.2.2",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.7",
     "jszip": "^3.10.1",
     "lucide-react": "^0.477.0",
+    "mammoth": "^1.12.0",
     "next": "16.2.2",
     "next-intl": "^4.9.0",
     "next-themes": "^0.4.6",
@@ -59,6 +64,7 @@
     "sonner": "^2.0.1",
     "stripe": "^17.7.0",
     "tailwind-merge": "^3.0.2",
+    "xlsx": "^0.18.5",
     "zod": "^3.24.2"
   },
   "devDependencies": {

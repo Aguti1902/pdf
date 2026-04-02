@@ -4,9 +4,9 @@ import { useState, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { PaywallModal } from "@/components/checkout/PaywallModal";
+import { DownloadGateModals } from "@/components/checkout/DownloadGateModals";
 import { reorderPdfPages } from "@/lib/pdf-processing/reorder";
-import { useSubscriptionDownload } from "@/hooks/useSubscriptionDownload";
+import { useDownloadGate } from "@/hooks/useDownloadGate";
 import { Upload, GripVertical, Loader2, Download, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -16,7 +16,7 @@ export function ReorderPagesProcessor() {
   const [order, setOrder] = useState<number[]>([]);
   const [result, setResult] = useState<Blob | null>(null);
   const [processing, setProcessing] = useState(false);
-  const { requestDownload, showPaywall, closePaywall } = useSubscriptionDownload();
+  const gate = useDownloadGate();
 
   const onDrop = useCallback(async (accepted: File[]) => {
     const f = accepted[0];
@@ -64,7 +64,7 @@ export function ReorderPagesProcessor() {
             <CheckCircle2 className="h-5 w-5" />
             <span className="font-semibold">Pages reordered!</span>
           </div>
-          <Button size="lg" className="w-full gap-2" onClick={() => requestDownload(result, `reordered_${file.name}`)}>
+          <Button size="lg" className="w-full gap-2" onClick={() => gate.request(result, `reordered_${file.name}`)}>
             <Download className="h-4 w-4" /> Download reordered PDF
           </Button>
           <Button variant="outline" size="sm" className="w-full" onClick={() => { setResult(null); setFile(null); }}>Reorder another file</Button>
@@ -96,7 +96,7 @@ export function ReorderPagesProcessor() {
         </div>
       )}
 
-      <PaywallModal open={showPaywall} onClose={closePaywall} toolName="Reorder Pages" />
+      <DownloadGateModals gate={gate} toolName="Reorder Pages" />
     </div>
   );
 }
