@@ -19,6 +19,12 @@ export const metadata: Metadata = {
   ...DEFAULT_METADATA,
   title: DEFAULT_METADATA.title,
   description: DEFAULT_METADATA.description,
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+    ],
+    apple: "/icon.svg",
+  },
 };
 
 export default async function RootLayout({

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- Background rounded square -->
+  <rect width="32" height="32" rx="7" fill="#2563EB"/>
+  <!-- Document body -->
+  <rect x="7" y="5" width="14" height="18" rx="1.5" fill="white"/>
+  <!-- Folded corner -->
+  <path d="M17 5 L21 9 L17 9 Z" fill="#BFDBFE"/>
+  <path d="M17 5 L21 9 L17 9 Z" fill="#93C5FD"/>
+  <!-- Text lines on document -->
+  <rect x="9" y="12" width="8" height="1.5" rx="0.75" fill="#BFDBFE"/>
+  <rect x="9" y="15" width="10" height="1.5" rx="0.75" fill="#BFDBFE"/>
+  <rect x="9" y="18" width="6" height="1.5" rx="0.75" fill="#BFDBFE"/>
+  <!-- "P" badge bottom-right -->
+  <circle cx="23" cy="23" r="6" fill="#1D4ED8"/>
+  <text x="23" y="27" text-anchor="middle" font-family="Arial,sans-serif" font-size="8" font-weight="900" fill="white">P</text>
+</svg>
