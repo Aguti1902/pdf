@@ -3,8 +3,8 @@ import { PRICING } from "@/config/pricing";
 
 const faqs = [
   {
-    question: "Is DocForge free to use?",
-    answer: `DocForge is a subscription service. You can open the editor and preview your document for free, but downloading requires an active subscription. Start for just ${PRICING.trial.label} for a ${PRICING.trial.days}-day full access trial, then ${PRICING.monthly.label}/month.`,
+    question: "Is PDFCraft free to use?",
+    answer: `PDFCraft is a subscription service. You can open the editor and preview your document for free, but downloading requires an active subscription. Start for just ${PRICING.trial.label} for a ${PRICING.trial.days}-day full access trial, then ${PRICING.monthly.label}/month.`,
   },
   {
     question: "How does the trial work?",
@@ -20,7 +20,7 @@ const faqs = [
   },
   {
     question: "Do I need to install software?",
-    answer: "No. DocForge works 100% in your browser — on any device, any OS. No downloads, no plugins required.",
+    answer: "No. PDFCraft works 100% in your browser — on any device, any OS. No downloads, no plugins required.",
   },
   {
     question: "What file types are supported?",
@@ -37,7 +37,7 @@ export function HomeFaqs() {
             Frequently Asked Questions
           </h2>
           <p className="text-muted-foreground">
-            Everything you need to know about DocForge.
+            Everything you need to know about PDFCraft.
           </p>
         </div>
         <FaqAccordion items={faqs} />

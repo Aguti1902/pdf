@@ -3,8 +3,8 @@ import { SITE } from "@/config/seo";
 import { PRICING } from "@/config/pricing";
 
 export const metadata: Metadata = {
-  title: "Subscription Terms – DocForge",
-  description: "Read DocForge's Subscription Terms and cancellation policy.",
+  title: "Subscription Terms – PDFCraft",
+  description: "Read PDFCraft's Subscription Terms and cancellation policy.",
 };
 
 export default function SubscriptionTermsPage() {
@@ -30,7 +30,7 @@ export default function SubscriptionTermsPage() {
         <section>
           <h2 className="text-lg font-bold mb-2">1. No Free Tier</h2>
           <p className="text-muted-foreground">
-            DocForge does not offer a free download plan. You may open and preview documents in the editor without a subscription. However, downloading or exporting any processed document requires an active paid subscription.
+            PDFCraft does not offer a free download plan. You may open and preview documents in the editor without a subscription. However, downloading or exporting any processed document requires an active paid subscription.
           </p>
         </section>
 

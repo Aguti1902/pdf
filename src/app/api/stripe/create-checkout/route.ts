@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { priceId, couponCode, userEmail, userName } = body;
 
-    const email = userEmail ?? "guest@docforge.app";
+    const email = userEmail ?? "guest@pdfcraft.online";
     const name  = userName  ?? "Guest User";
 
     const customer = await createStripeCustomer(email, name);

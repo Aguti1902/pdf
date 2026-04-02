@@ -15,7 +15,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Dashboard – DocForge",
+  title: "Dashboard – PDFCraft",
   robots: { index: false, follow: false },
 };
 

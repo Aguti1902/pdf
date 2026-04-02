@@ -7,7 +7,7 @@ import { FileText, Download, Search, Clock, Info } from "lucide-react";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "File History – DocForge Dashboard",
+  title: "File History – PDFCraft Dashboard",
   robots: { index: false, follow: false },
 };
 
@@ -37,7 +37,7 @@ export default function HistoryPage() {
         <div className="flex items-start gap-2 rounded-lg border bg-blue-50 p-3 text-xs text-blue-800 dark:bg-blue-900/20 dark:text-blue-300">
           <Info className="h-3.5 w-3.5 shrink-0 mt-0.5" />
           <p>
-            For your privacy, files uploaded to DocForge are automatically and permanently deleted
+            For your privacy, files uploaded to PDFCraft are automatically and permanently deleted
             from our servers after 2 hours. The history below shows file names and metadata only.
           </p>
         </div>

@@ -27,7 +27,7 @@ import type { Metadata } from "next";
 import { PRICING } from "@/config/pricing";
 
 export const metadata: Metadata = {
-  title: "Billing – DocForge Dashboard",
+  title: "Billing – PDFCraft Dashboard",
   robots: { index: false, follow: false },
 };
 
@@ -38,7 +38,7 @@ const mockUser = {
 };
 
 const mockInvoices = [
-  { id: "inv_001", date: "Apr 1, 2026", amount: "0,50 €", status: "paid", description: "Trial — DocForge Premium" },
+  { id: "inv_001", date: "Apr 1, 2026", amount: "0,50 €", status: "paid", description: "Trial — PDFCraft Premium" },
 ];
 
 export default function BillingPage() {
@@ -61,7 +61,7 @@ export default function BillingPage() {
             <div className="flex items-start justify-between">
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="font-semibold text-lg">DocForge Premium</span>
+                  <span className="font-semibold text-lg">PDFCraft Premium</span>
                   <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
                     Trial
                   </Badge>

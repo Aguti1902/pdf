@@ -338,7 +338,7 @@ export function EditorLayout() {
         <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary">
           <FileText className="h-4 w-4 text-primary-foreground" />
         </div>
-        <span className="hidden font-bold text-sm sm:block">DocForge</span>
+        <span className="hidden font-bold text-sm sm:block">PDFCraft</span>
         <Separator orientation="vertical" className="h-5" />
         <span className="max-w-[180px] truncate text-sm text-muted-foreground sm:max-w-xs">{fileName}</span>
         {pdfFile && <Badge variant="secondary" className="hidden text-xs sm:flex">{(pdfFile.size / 1024 / 1024).toFixed(1)} MB</Badge>}

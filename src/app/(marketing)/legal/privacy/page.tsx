@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { SITE } from "@/config/seo";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy – DocForge",
-  description: "Read DocForge's Privacy Policy.",
+  title: "Privacy Policy – PDFCraft",
+  description: "Read PDFCraft's Privacy Policy.",
 };
 
 export default function PrivacyPage() {

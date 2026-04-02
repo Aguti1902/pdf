@@ -39,7 +39,7 @@ export default function SignUpPage() {
     try {
       // TODO: implement auth
       await new Promise((r) => setTimeout(r, 1000));
-      toast.success("Account created! Welcome to DocForge.");
+      toast.success("Account created! Welcome to PDFCraft.");
     } catch {
       toast.error("Something went wrong. Please try again.");
     } finally {

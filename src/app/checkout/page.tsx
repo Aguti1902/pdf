@@ -100,7 +100,7 @@ export default function CheckoutPage() {
                 <div className="mb-4 rounded-xl border-2 border-primary/20 bg-primary/5 p-4">
                   <div className="flex items-center justify-between mb-1">
                     <div>
-                      <p className="font-bold">DocForge Premium</p>
+                      <p className="font-bold">PDFCraft Premium</p>
                       <p className="text-xs text-muted-foreground">{PRICING.trial.days}-Day Full Access Trial</p>
                     </div>
                     <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">

@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "FAQ – DocForge Help Center",
-  description: "Frequently asked questions about DocForge PDF tools, pricing, billing, and file security.",
+  title: "FAQ – PDFCraft Help Center",
+  description: "Frequently asked questions about PDFCraft PDF tools, pricing, billing, and file security.",
   alternates: { canonical: "/faq" },
 };
 
@@ -13,10 +13,10 @@ const sections = [
   {
     title: "Getting Started",
     items: [
-      { question: "Do I need to create an account to use DocForge?", answer: "No. You can upload and process files without an account. An account is required to access your file history and manage your subscription." },
-      { question: "What file types does DocForge support?", answer: "PDF, Word (.doc, .docx), Excel (.xls, .xlsx), PowerPoint (.ppt, .pptx), JPG, PNG, GIF, and WEBP files depending on the tool." },
+      { question: "Do I need to create an account to use PDFCraft?", answer: "No. You can upload and process files without an account. An account is required to access your file history and manage your subscription." },
+      { question: "What file types does PDFCraft support?", answer: "PDF, Word (.doc, .docx), Excel (.xls, .xlsx), PowerPoint (.ppt, .pptx), JPG, PNG, GIF, and WEBP files depending on the tool." },
       { question: "Is there a file size limit?", answer: "Free users: up to 5MB per file. Premium users: up to 100MB per file." },
-      { question: "Does DocForge work on mobile?", answer: "Yes. DocForge is fully responsive and works on iPhone, Android, tablet, and any modern browser." },
+      { question: "Does PDFCraft work on mobile?", answer: "Yes. PDFCraft is fully responsive and works on iPhone, Android, tablet, and any modern browser." },
     ],
   },
   {
@@ -25,22 +25,22 @@ const sections = [
       { question: "How does the $0.99 trial work?", answer: "You get 7 days of full Premium access for $0.99. After 7 days, your subscription auto-renews at $9.99/month until cancelled." },
       { question: "How do I cancel my subscription?", answer: "Log in → Dashboard → Billing → Cancel Subscription. Takes effect immediately. No future charges." },
       { question: "Will I be notified before renewal?", answer: "Yes. We send a reminder email at least 3 days before your trial ends and before each monthly renewal." },
-      { question: "Can I get a refund?", answer: "The $0.99 trial fee is non-refundable. Monthly charges can be refunded within 3 days if no files were downloaded. Contact support@docforge.app." },
+      { question: "Can I get a refund?", answer: "The $0.99 trial fee is non-refundable. Monthly charges can be refunded within 3 days if no files were downloaded. Contact support@pdfcraft.online." },
     ],
   },
   {
     title: "Privacy & Security",
     items: [
       { question: "Are my files secure?", answer: "Yes. All uploads are encrypted with SSL. Files are processed on secure servers and permanently deleted after 2 hours." },
-      { question: "Can DocForge employees read my files?", answer: "No. Your files are processed automatically and no DocForge staff can access the content of your uploaded files." },
-      { question: "Does DocForge store my files permanently?", answer: "No. All files are automatically and permanently deleted after 2 hours, regardless of subscription status." },
+      { question: "Can PDFCraft employees read my files?", answer: "No. Your files are processed automatically and no PDFCraft staff can access the content of your uploaded files." },
+      { question: "Does PDFCraft store my files permanently?", answer: "No. All files are automatically and permanently deleted after 2 hours, regardless of subscription status." },
     ],
   },
   {
     title: "Technical Questions",
     items: [
       { question: "Why is my PDF not processing correctly?", answer: "Some PDFs are password-protected, damaged, or use non-standard encoding. Try removing password protection first, or contact support." },
-      { question: "What browser should I use?", answer: "DocForge works best on Chrome, Firefox, Safari, and Edge (latest versions). We recommend keeping your browser updated." },
+      { question: "What browser should I use?", answer: "PDFCraft works best on Chrome, Firefox, Safari, and Edge (latest versions). We recommend keeping your browser updated." },
       { question: "Is there an API?", answer: "An API for developers is in development and will be available to Premium users. Stay tuned for updates." },
     ],
   },
@@ -53,7 +53,7 @@ export default function FaqPage() {
         <div className="mb-12 text-center">
           <h1 className="mb-3 text-4xl font-extrabold">Help Center</h1>
           <p className="text-muted-foreground">
-            Find answers to the most common questions about DocForge.
+            Find answers to the most common questions about PDFCraft.
           </p>
         </div>
 

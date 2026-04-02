@@ -28,7 +28,7 @@ export const tools: Tool[] = [
     category: "edit",
     color: "#2563EB",
     bgColor: "#EFF6FF",
-    metaTitle: "Edit PDF Online Free – Modify Text & Images | DocForge",
+    metaTitle: "Edit PDF Online Free – Modify Text & Images | PDFCraft",
     metaDescription: "Edit PDF files online for free. Add text, images, and annotations. No software needed. Fast, secure, and easy to use.",
     benefits: [
       "Edit any PDF directly in your browser",
@@ -37,7 +37,7 @@ export const tools: Tool[] = [
       "Works on desktop and mobile",
     ],
     faqs: [
-      { question: "Can I edit any PDF?", answer: "Yes, DocForge supports editing text, images, and other elements in most standard PDF files." },
+      { question: "Can I edit any PDF?", answer: "Yes, PDFCraft supports editing text, images, and other elements in most standard PDF files." },
       { question: "Is editing free?", answer: "You can preview and edit for free. Downloading the edited PDF requires a premium plan." },
     ],
     relatedTools: ["add-text-pdf", "annotate-pdf", "sign-pdf"],
@@ -52,7 +52,7 @@ export const tools: Tool[] = [
     category: "edit",
     color: "#7C3AED",
     bgColor: "#F5F3FF",
-    metaTitle: "Sign PDF Online Free – Digital Signature Tool | DocForge",
+    metaTitle: "Sign PDF Online Free – Digital Signature Tool | PDFCraft",
     metaDescription: "Add your digital signature to PDFs online. Draw, type or upload a signature. Legally binding and secure.",
     benefits: [
       "Draw, type, or upload your signature",
@@ -61,7 +61,7 @@ export const tools: Tool[] = [
       "No account required to get started",
     ],
     faqs: [
-      { question: "Are digital signatures legally valid?", answer: "Yes, digital signatures created with DocForge comply with eSign standards and are legally binding in most countries." },
+      { question: "Are digital signatures legally valid?", answer: "Yes, digital signatures created with PDFCraft comply with eSign standards and are legally binding in most countries." },
       { question: "Can I sign multiple documents?", answer: "Premium users can sign unlimited documents. Free users can sign and preview one document at a time." },
     ],
     relatedTools: ["edit-pdf", "fill-pdf", "add-text-pdf"],
@@ -76,7 +76,7 @@ export const tools: Tool[] = [
     category: "edit",
     color: "#059669",
     bgColor: "#ECFDF5",
-    metaTitle: "Fill PDF Forms Online Free – No Software Needed | DocForge",
+    metaTitle: "Fill PDF Forms Online Free – No Software Needed | PDFCraft",
     metaDescription: "Fill out PDF forms online instantly. Enter text in form fields, check boxes, and sign. Works on any device.",
     benefits: [
       "Fill any PDF form field instantly",
@@ -100,7 +100,7 @@ export const tools: Tool[] = [
     category: "edit",
     color: "#D97706",
     bgColor: "#FFFBEB",
-    metaTitle: "Annotate PDF Online Free – Add Comments & Notes | DocForge",
+    metaTitle: "Annotate PDF Online Free – Add Comments & Notes | PDFCraft",
     metaDescription: "Annotate PDFs online. Add sticky notes, comments, stamps and text markup. Perfect for document review and collaboration.",
     benefits: [
       "Add sticky notes and comments",
@@ -124,7 +124,7 @@ export const tools: Tool[] = [
     category: "edit",
     color: "#2563EB",
     bgColor: "#EFF6FF",
-    metaTitle: "Add Text to PDF Online Free – Insert Text Anywhere | DocForge",
+    metaTitle: "Add Text to PDF Online Free – Insert Text Anywhere | PDFCraft",
     metaDescription: "Add custom text to any PDF online. Choose font, size and color. No software installation required.",
     benefits: [
       "Place text anywhere on any page",
@@ -148,7 +148,7 @@ export const tools: Tool[] = [
     category: "edit",
     color: "#F59E0B",
     bgColor: "#FFFBEB",
-    metaTitle: "Highlight PDF Online Free – Mark Important Text | DocForge",
+    metaTitle: "Highlight PDF Online Free – Mark Important Text | PDFCraft",
     metaDescription: "Highlight text in PDF files online. Choose highlight colors, underline, or strikethrough text. Easy and fast.",
     benefits: [
       "Multiple highlight colors available",
@@ -172,7 +172,7 @@ export const tools: Tool[] = [
     category: "edit",
     color: "#EC4899",
     bgColor: "#FDF2F8",
-    metaTitle: "Draw on PDF Online Free – Freehand Drawing Tool | DocForge",
+    metaTitle: "Draw on PDF Online Free – Freehand Drawing Tool | PDFCraft",
     metaDescription: "Draw freehand on PDF files online. Add sketches, arrows, shapes and drawings. No app download required.",
     benefits: [
       "Freehand pen and brush tools",
@@ -196,7 +196,7 @@ export const tools: Tool[] = [
     category: "edit",
     color: "#0891B2",
     bgColor: "#ECFEFF",
-    metaTitle: "Add Image to PDF Online Free – Insert Photos | DocForge",
+    metaTitle: "Add Image to PDF Online Free – Insert Photos | PDFCraft",
     metaDescription: "Add images and photos to PDF files online. Insert, resize and position images anywhere. Fast and free to try.",
     benefits: [
       "Drag and drop image placement",
@@ -220,7 +220,7 @@ export const tools: Tool[] = [
     category: "organize",
     color: "#2563EB",
     bgColor: "#EFF6FF",
-    metaTitle: "Merge PDF Files Online Free – Combine PDFs | DocForge",
+    metaTitle: "Merge PDF Files Online Free – Combine PDFs | PDFCraft",
     metaDescription: "Merge multiple PDF files into one. Drag and drop to reorder. Fast, free PDF merger — no software needed.",
     benefits: [
       "Merge unlimited PDF files",
@@ -230,7 +230,7 @@ export const tools: Tool[] = [
     ],
     faqs: [
       { question: "How many files can I merge at once?", answer: "Free users can merge up to 2 files. Premium users can merge unlimited files at once." },
-      { question: "Will the quality be affected?", answer: "No, DocForge merges PDFs without re-encoding, preserving the original quality." },
+      { question: "Will the quality be affected?", answer: "No, PDFCraft merges PDFs without re-encoding, preserving the original quality." },
     ],
     relatedTools: ["split-pdf", "reorder-pages", "compress-pdf"],
   },
@@ -244,7 +244,7 @@ export const tools: Tool[] = [
     category: "organize",
     color: "#7C3AED",
     bgColor: "#F5F3FF",
-    metaTitle: "Split PDF Online Free – Separate Pages | DocForge",
+    metaTitle: "Split PDF Online Free – Separate Pages | PDFCraft",
     metaDescription: "Split PDF files into multiple documents online. Extract specific pages or ranges. Free PDF splitter tool.",
     benefits: [
       "Split into individual pages",
@@ -268,7 +268,7 @@ export const tools: Tool[] = [
     category: "organize",
     color: "#059669",
     bgColor: "#ECFDF5",
-    metaTitle: "Compress PDF Online Free – Reduce File Size | DocForge",
+    metaTitle: "Compress PDF Online Free – Reduce File Size | PDFCraft",
     metaDescription: "Compress PDF files online to reduce file size. Preserve quality while making PDFs smaller. Free PDF compressor.",
     benefits: [
       "Up to 90% file size reduction",
@@ -292,7 +292,7 @@ export const tools: Tool[] = [
     category: "organize",
     color: "#D97706",
     bgColor: "#FFFBEB",
-    metaTitle: "Rotate PDF Pages Online Free – Fix Orientation | DocForge",
+    metaTitle: "Rotate PDF Pages Online Free – Fix Orientation | PDFCraft",
     metaDescription: "Rotate PDF pages online. Fix upside-down or sideways pages. Rotate individual pages or all at once.",
     benefits: [
       "Rotate clockwise or counter-clockwise",
@@ -316,7 +316,7 @@ export const tools: Tool[] = [
     category: "organize",
     color: "#EF4444",
     bgColor: "#FEF2F2",
-    metaTitle: "Delete PDF Pages Online Free – Remove Pages | DocForge",
+    metaTitle: "Delete PDF Pages Online Free – Remove Pages | PDFCraft",
     metaDescription: "Delete pages from PDF files online. Select and remove any pages. Preview before saving. Free PDF page remover.",
     benefits: [
       "Visual page preview before deleting",
@@ -340,7 +340,7 @@ export const tools: Tool[] = [
     category: "organize",
     color: "#0891B2",
     bgColor: "#ECFEFF",
-    metaTitle: "Reorder PDF Pages Online Free – Rearrange Pages | DocForge",
+    metaTitle: "Reorder PDF Pages Online Free – Rearrange Pages | PDFCraft",
     metaDescription: "Rearrange PDF pages online with drag and drop. Reorder, organize and rearrange pages easily. Free tool.",
     benefits: [
       "Drag-and-drop page reordering",
@@ -364,7 +364,7 @@ export const tools: Tool[] = [
     category: "convert-from",
     color: "#2563EB",
     bgColor: "#EFF6FF",
-    metaTitle: "PDF to Word Converter Online Free – PDF to DOCX | DocForge",
+    metaTitle: "PDF to Word Converter Online Free – PDF to DOCX | PDFCraft",
     metaDescription: "Convert PDF to Word online. Get editable DOCX files with preserved formatting. Fast, accurate PDF to Word converter.",
     benefits: [
       "Accurate layout preservation",
@@ -373,7 +373,7 @@ export const tools: Tool[] = [
       "No Microsoft Word required",
     ],
     faqs: [
-      { question: "Does it preserve the original formatting?", answer: "Yes, DocForge preserves fonts, tables, columns, and images during PDF to Word conversion." },
+      { question: "Does it preserve the original formatting?", answer: "Yes, PDFCraft preserves fonts, tables, columns, and images during PDF to Word conversion." },
       { question: "Can I convert scanned PDFs?", answer: "Yes, our OCR technology recognizes text from scanned documents and converts them to editable Word files." },
     ],
     relatedTools: ["pdf-to-jpg", "pdf-to-png", "word-to-pdf"],
@@ -388,7 +388,7 @@ export const tools: Tool[] = [
     category: "convert-from",
     color: "#F59E0B",
     bgColor: "#FFFBEB",
-    metaTitle: "PDF to JPG Converter Online Free – Convert PDF to Image | DocForge",
+    metaTitle: "PDF to JPG Converter Online Free – Convert PDF to Image | PDFCraft",
     metaDescription: "Convert PDF pages to JPG images online. High-quality conversion, multiple pages at once. Free PDF to JPG converter.",
     benefits: [
       "High-resolution output",
@@ -412,7 +412,7 @@ export const tools: Tool[] = [
     category: "convert-from",
     color: "#7C3AED",
     bgColor: "#F5F3FF",
-    metaTitle: "PDF to PNG Converter Online Free – PDF to Image | DocForge",
+    metaTitle: "PDF to PNG Converter Online Free – PDF to Image | PDFCraft",
     metaDescription: "Convert PDF to PNG images online. Lossless quality, transparent backgrounds supported. Free PDF to PNG tool.",
     benefits: [
       "Lossless PNG quality",
@@ -436,7 +436,7 @@ export const tools: Tool[] = [
     category: "convert-to",
     color: "#2563EB",
     bgColor: "#EFF6FF",
-    metaTitle: "Word to PDF Converter Online Free – DOCX to PDF | DocForge",
+    metaTitle: "Word to PDF Converter Online Free – DOCX to PDF | PDFCraft",
     metaDescription: "Convert Word to PDF online. Accurate formatting, free Word to PDF converter. Works with .doc and .docx files.",
     benefits: [
       "Perfect format preservation",
@@ -460,7 +460,7 @@ export const tools: Tool[] = [
     category: "convert-to",
     color: "#F59E0B",
     bgColor: "#FFFBEB",
-    metaTitle: "JPG to PDF Converter Online Free – Image to PDF | DocForge",
+    metaTitle: "JPG to PDF Converter Online Free – Image to PDF | PDFCraft",
     metaDescription: "Convert JPG images to PDF online. Combine multiple images into one PDF. Free JPG to PDF converter.",
     benefits: [
       "Convert single or multiple images",
@@ -484,7 +484,7 @@ export const tools: Tool[] = [
     category: "convert-to",
     color: "#059669",
     bgColor: "#ECFDF5",
-    metaTitle: "Excel to PDF Converter Online Free – XLS to PDF | DocForge",
+    metaTitle: "Excel to PDF Converter Online Free – XLS to PDF | PDFCraft",
     metaDescription: "Convert Excel files to PDF online. Preserve tables, charts and formatting. Free Excel to PDF converter.",
     benefits: [
       "Preserves all Excel formatting",
@@ -508,7 +508,7 @@ export const tools: Tool[] = [
     category: "convert-to",
     color: "#EF4444",
     bgColor: "#FEF2F2",
-    metaTitle: "PowerPoint to PDF Converter Online Free – PPT to PDF | DocForge",
+    metaTitle: "PowerPoint to PDF Converter Online Free – PPT to PDF | PDFCraft",
     metaDescription: "Convert PowerPoint to PDF online. Each slide exported as a PDF page. Free PPT to PDF converter.",
     benefits: [
       "Each slide becomes a PDF page",

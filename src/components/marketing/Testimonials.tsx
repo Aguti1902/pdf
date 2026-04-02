@@ -7,14 +7,14 @@ const testimonials = [
     role: "Freelance Designer",
     avatar: "SM",
     rating: 5,
-    text: "I use DocForge every single day for client contracts. The sign and fill tools are incredibly intuitive — faster than any desktop app I've tried.",
+    text: "I use PDFCraft every single day for client contracts. The sign and fill tools are incredibly intuitive — faster than any desktop app I've tried.",
   },
   {
     name: "James T.",
     role: "Operations Manager",
     avatar: "JT",
     rating: 5,
-    text: "We switched our entire team to DocForge for PDF processing. The batch convert feature alone saves us hours each week. The pricing is very fair.",
+    text: "We switched our entire team to PDFCraft for PDF processing. The batch convert feature alone saves us hours each week. The pricing is very fair.",
   },
   {
     name: "María G.",
@@ -28,7 +28,7 @@ const testimonials = [
     role: "Real Estate Agent",
     avatar: "AK",
     rating: 5,
-    text: "I need to sign and merge contracts constantly. DocForge makes it effortless — works perfectly on my phone between showings.",
+    text: "I need to sign and merge contracts constantly. PDFCraft makes it effortless — works perfectly on my phone between showings.",
   },
   {
     name: "Priya N.",
@@ -42,7 +42,7 @@ const testimonials = [
     role: "Small Business Owner",
     avatar: "TR",
     rating: 5,
-    text: "Needed to compress large invoices before emailing. DocForge reduced a 15MB file to 1.2MB with no visible quality loss. Impressive.",
+    text: "Needed to compress large invoices before emailing. PDFCraft reduced a 15MB file to 1.2MB with no visible quality loss. Impressive.",
   },
 ];
 
@@ -55,7 +55,7 @@ export function Testimonials() {
             Loved by professionals
           </h2>
           <p className="text-muted-foreground">
-            Join hundreds of thousands of users who trust DocForge every day.
+            Join hundreds of thousands of users who trust PDFCraft every day.
           </p>
         </div>
 

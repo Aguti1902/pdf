@@ -3,7 +3,7 @@ import { SITE } from "@/config/seo";
 import { PRICING } from "@/config/pricing";
 
 export const metadata: Metadata = {
-  title: "Refund Policy – DocForge",
+  title: "Refund Policy – PDFCraft",
 };
 
 export default function RefundPage() {

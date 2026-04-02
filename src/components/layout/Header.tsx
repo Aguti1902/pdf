@@ -63,7 +63,7 @@ export function Header() {
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <FileText className="h-4 w-4" />
           </div>
-          <span className="gradient-text">DocForge</span>
+          <span className="gradient-text">PDFCraft</span>
         </Link>
 
         {/* Desktop Nav */}

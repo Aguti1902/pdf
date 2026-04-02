@@ -5,8 +5,8 @@ import Link from "next/link";
 import { ArrowRight, Clock } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Blog – DocForge PDF Tips & Guides",
-  description: "Learn how to edit, convert, sign, and manage PDFs with DocForge's expert guides and tutorials.",
+  title: "Blog – PDFCraft PDF Tips & Guides",
+  description: "Learn how to edit, convert, sign, and manage PDFs with PDFCraft's expert guides and tutorials.",
   alternates: { canonical: "/blog" },
 };
 
@@ -59,7 +59,7 @@ const posts = [
   {
     slug: "pdf-security-best-practices",
     title: "PDF Security: What You Need to Know Before Uploading",
-    excerpt: "Is it safe to upload sensitive PDFs to online tools? Here's exactly what DocForge does (and doesn't) store.",
+    excerpt: "Is it safe to upload sensitive PDFs to online tools? Here's exactly what PDFCraft does (and doesn't) store.",
     tag: "Security",
     date: "Feb 22, 2026",
     readTime: "7 min read",
@@ -75,9 +75,9 @@ export default function BlogPage() {
     <div className="py-16">
       <div className="container mx-auto max-w-5xl px-4">
         <div className="mb-12 text-center">
-          <h1 className="mb-3 text-4xl font-extrabold">DocForge Blog</h1>
+          <h1 className="mb-3 text-4xl font-extrabold">PDFCraft Blog</h1>
           <p className="text-muted-foreground">
-            PDF tips, guides, and tutorials from the DocForge team.
+            PDF tips, guides, and tutorials from the PDFCraft team.
           </p>
         </div>
 

@@ -105,7 +105,7 @@ export function ToolPage({ tool }: ToolPageProps) {
         {/* Benefits */}
         <section className="py-14 border-t">
           <div className="container mx-auto max-w-5xl px-4">
-            <h2 className="mb-8 text-center text-2xl font-bold">Why use DocForge for {tool.name}?</h2>
+            <h2 className="mb-8 text-center text-2xl font-bold">Why use PDFCraft for {tool.name}?</h2>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {tool.benefits.map((benefit) => (
                 <div key={benefit} className="flex items-start gap-2.5 rounded-lg border bg-card p-4">

@@ -1,14 +1,14 @@
 export const SITE = {
-  name: "DocForge",
+  name: "PDFCraft",
   tagline: "Edit, Sign & Convert PDFs Online",
   description:
-    "DocForge is the all-in-one PDF platform. Edit, sign, convert, compress and organize PDF files online — no software needed. Fast, secure, and built for everyone.",
-  url: process.env.NEXT_PUBLIC_APP_URL ?? "https://docforge.app",
+    "PDFCraft is the all-in-one PDF platform. Edit, sign, convert, compress and organize PDF files online — no software needed. Fast, secure, and built for everyone.",
+  url: process.env.NEXT_PUBLIC_APP_URL ?? "https://pdfcraft.online",
   ogImage: "/og-image.png",
-  twitter: "@docforgeapp",
-  supportEmail: "support@docforge.app",
-  legalEmail: "legal@docforge.app",
-  companyName: "DocForge Inc.",
+  twitter: "@pdfcraftonline",
+  supportEmail: "support@pdfcraft.online",
+  legalEmail: "legal@pdfcraft.online",
+  companyName: "PDFCraft Ltd.",
   companyAddress: "123 Market Street, San Francisco, CA 94105",
 };
 

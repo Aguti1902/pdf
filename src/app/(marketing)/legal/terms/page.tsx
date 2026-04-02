@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { SITE } from "@/config/seo";
 
 export const metadata: Metadata = {
-  title: "Terms of Service – DocForge",
-  description: "Read DocForge's Terms of Service.",
+  title: "Terms of Service – PDFCraft",
+  description: "Read PDFCraft's Terms of Service.",
 };
 
 export default function TermsPage() {

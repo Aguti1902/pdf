@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Cookie Policy – DocForge" };
+export const metadata: Metadata = { title: "Cookie Policy – PDFCraft" };
 
 export default function CookiesPage() {
   return (

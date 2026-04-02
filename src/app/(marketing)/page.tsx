@@ -88,12 +88,12 @@ export default function HomePage() {
       <ToolsGrid />
       <HowItWorks />
 
-      {/* Why DocForge */}
+      {/* Why PDFCraft */}
       <section className="py-20 border-t">
         <div className="container mx-auto max-w-7xl px-4">
           <div className="mb-12 text-center">
             <h2 className="mb-3 text-3xl font-extrabold tracking-tight lg:text-4xl">
-              Why teams choose DocForge
+              Why teams choose PDFCraft
             </h2>
             <p className="mx-auto max-w-xl text-muted-foreground">
               Built for professionals who need reliable, fast, and private PDF

@@ -25,7 +25,7 @@ export function PricingCard({ features, className }: PricingCardProps) {
       </Badge>
 
       <div className="mb-6">
-        <h3 className="text-xl font-bold">DocForge Premium</h3>
+        <h3 className="text-xl font-bold">PDFCraft Premium</h3>
         <p className="mt-1 text-sm text-muted-foreground">
           All tools unlocked. Unlimited downloads.
         </p>

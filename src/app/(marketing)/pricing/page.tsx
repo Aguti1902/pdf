@@ -7,7 +7,7 @@ import { Check, Shield, Lock, Star } from "lucide-react";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Pricing – DocForge PDF Tools",
+  title: "Pricing – PDFCraft PDF Tools",
   description: `Full access to all PDF tools for just ${PRICING.trial.label} for ${PRICING.trial.days} days, then ${PRICING.monthly.label}/month. Cancel anytime.`,
   alternates: { canonical: "/pricing" },
 };
@@ -19,7 +19,7 @@ const billingFaqs = [
   },
   {
     question: "Is there a free plan?",
-    answer: "No. DocForge is a professional subscription tool. You can view the editor interface for free, but downloading any processed document requires an active subscription. The trial at 0,50 € gives you full access for 7 days.",
+    answer: "No. PDFCraft is a professional subscription tool. You can view the editor interface for free, but downloading any processed document requires an active subscription. The trial at 0,50 € gives you full access for 7 days.",
   },
   {
     question: "When will I be charged after the trial?",
@@ -31,7 +31,7 @@ const billingFaqs = [
   },
   {
     question: "Can I get a refund?",
-    answer: `The ${PRICING.trial.label} trial fee is non-refundable. Monthly charges can be refunded within 3 days if no files were downloaded. Contact support@docforge.app.`,
+    answer: `The ${PRICING.trial.label} trial fee is non-refundable. Monthly charges can be refunded within 3 days if no files were downloaded. Contact support@pdfcraft.online.`,
   },
   {
     question: "What happens if I don't cancel before the trial ends?",
