@@ -10,10 +10,32 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowRight, ChevronRight, Clock, Wrench } from "lucide-react";
 import type { Tool } from "@/config/tools";
-import { getRelatedTools, EDITOR_TOOL_MAP, COMING_SOON_TOOLS } from "@/config/tools";
+import { getRelatedTools, EDITOR_TOOL_MAP, COMING_SOON_TOOLS, CLIENT_PROCESSOR_TOOLS } from "@/config/tools";
 import type { UploadedFile } from "@/types";
 import * as Icons from "lucide-react";
 import { PaywallModal } from "@/components/checkout/PaywallModal";
+import dynamic from "next/dynamic";
+
+// Lazy-load processors to avoid bundling pdf-lib on every page
+const MergePdfProcessor    = dynamic(() => import("./processors/MergePdfProcessor").then(m => ({ default: m.MergePdfProcessor })), { ssr: false });
+const SplitPdfProcessor    = dynamic(() => import("./processors/SplitPdfProcessor").then(m => ({ default: m.SplitPdfProcessor })), { ssr: false });
+const CompressPdfProcessor = dynamic(() => import("./processors/CompressPdfProcessor").then(m => ({ default: m.CompressPdfProcessor })), { ssr: false });
+const ReorderPagesProcessor = dynamic(() => import("./processors/ReorderPagesProcessor").then(m => ({ default: m.ReorderPagesProcessor })), { ssr: false });
+const PdfToImageProcessor  = dynamic(() => import("./processors/PdfToImageProcessor").then(m => ({ default: m.PdfToImageProcessor })), { ssr: false });
+const ImageToPdfProcessor  = dynamic(() => import("./processors/ImageToPdfProcessor").then(m => ({ default: m.ImageToPdfProcessor })), { ssr: false });
+
+function getProcessor(slug: string): React.ReactNode {
+  switch (slug) {
+    case "merge-pdf":    return <MergePdfProcessor />;
+    case "split-pdf":    return <SplitPdfProcessor />;
+    case "compress-pdf": return <CompressPdfProcessor />;
+    case "reorder-pages": return <ReorderPagesProcessor />;
+    case "pdf-to-jpg":   return <PdfToImageProcessor format="jpeg" />;
+    case "pdf-to-png":   return <PdfToImageProcessor format="png" />;
+    case "jpg-to-pdf":   return <ImageToPdfProcessor />;
+    default:             return null;
+  }
+}
 
 interface ToolPageProps {
   tool: Tool;
@@ -26,9 +48,11 @@ export function ToolPage({ tool }: ToolPageProps) {
   const router = useRouter();
   const relatedTools = getRelatedTools(tool.id);
 
-  const isEditorTool  = tool.slug in EDITOR_TOOL_MAP;
-  const isComingSoon  = COMING_SOON_TOOLS.has(tool.slug);
-  const editorAction  = EDITOR_TOOL_MAP[tool.slug];
+  const isEditorTool   = tool.slug in EDITOR_TOOL_MAP;
+  const isComingSoon   = COMING_SOON_TOOLS.has(tool.slug);
+  const isClientTool   = CLIENT_PROCESSOR_TOOLS.has(tool.slug);
+  const editorAction   = EDITOR_TOOL_MAP[tool.slug];
+  const processor      = isClientTool ? getProcessor(tool.slug) : null;
 
   const IconComponent = (Icons as unknown as Record<string, Icons.LucideIcon>)[tool.icon] ?? Icons.FileText;
 
@@ -38,7 +62,6 @@ export function ToolPage({ tool }: ToolPageProps) {
 
   const handleContinue = () => {
     if (isEditorTool && uploadedFile?._rawFile) {
-      // Save file to sessionStorage and open editor with correct tool
       setRedirecting(true);
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -94,10 +117,10 @@ export function ToolPage({ tool }: ToolPageProps) {
               <IconComponent className="h-8 w-8" style={{ color: tool.color }} />
             </div>
 
-            <div className="mb-3 flex items-center justify-center gap-2">
+            <div className="mb-3 flex items-center justify-center gap-2 flex-wrap">
               <Badge variant="secondary">Professional PDF Tool</Badge>
-              {isEditorTool  && <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-green-200"><Wrench className="mr-1 h-3 w-3" />Functional</Badge>}
-              {isComingSoon  && <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 border-amber-200"><Clock className="mr-1 h-3 w-3" />Coming Soon</Badge>}
+              {(isEditorTool || isClientTool) && <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-green-200"><Wrench className="mr-1 h-3 w-3" />Functional</Badge>}
+              {isComingSoon && <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 border-amber-200"><Clock className="mr-1 h-3 w-3" />Coming Soon</Badge>}
             </div>
 
             <h1 className="mb-4 text-4xl font-extrabold tracking-tight lg:text-5xl">
@@ -108,13 +131,12 @@ export function ToolPage({ tool }: ToolPageProps) {
             </p>
 
             {isComingSoon ? (
-              /* ── Coming Soon state ── */
               <div className="mx-auto max-w-lg rounded-2xl border-2 border-dashed border-amber-200 bg-amber-50 px-8 py-10 text-center dark:border-amber-800 dark:bg-amber-900/10">
                 <Clock className="mx-auto mb-4 h-12 w-12 text-amber-500" />
                 <h2 className="mb-2 text-xl font-bold text-foreground">Coming Soon</h2>
                 <p className="mb-5 text-sm text-muted-foreground">
-                  We&apos;re working on the <strong>{tool.name}</strong> feature. In the meantime,
-                  you can use our full PDF editor which includes many editing tools.
+                  We&apos;re working on <strong>{tool.name}</strong>. In the meantime,
+                  our PDF editor includes many tools to work with your documents.
                 </p>
                 <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
                   <Button size="sm" asChild>
@@ -125,8 +147,11 @@ export function ToolPage({ tool }: ToolPageProps) {
                   </Button>
                 </div>
               </div>
+            ) : isClientTool ? (
+              /* ── Client-side processor UI ── */
+              processor
             ) : (
-              /* ── Upload + Continue ── */
+              /* ── Upload + editor redirect ── */
               <div className="mx-auto max-w-lg">
                 <FileUploader
                   accept={acceptMap[tool.category]}
@@ -148,8 +173,6 @@ export function ToolPage({ tool }: ToolPageProps) {
                     )}
                   </Button>
                 )}
-
-                {/* Hint for editor tools */}
                 {isEditorTool && (
                   <p className="mt-3 text-xs text-center text-muted-foreground">
                     <Icons.Zap className="inline h-3 w-3 text-primary mr-1" />
@@ -193,9 +216,7 @@ export function ToolPage({ tool }: ToolPageProps) {
                 { step: "3", title: "Download result",    desc: "Get your processed file instantly. Clean output guaranteed." },
               ].map((s) => (
                 <div key={s.step} className="flex flex-col items-center">
-                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground font-bold text-lg">
-                    {s.step}
-                  </div>
+                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground font-bold text-lg">{s.step}</div>
                   <h3 className="mb-1 font-semibold">{s.title}</h3>
                   <p className="text-sm text-muted-foreground">{s.desc}</p>
                 </div>
@@ -204,7 +225,6 @@ export function ToolPage({ tool }: ToolPageProps) {
           </div>
         </section>
 
-        {/* FAQs */}
         {tool.faqs.length > 0 && (
           <section className="py-14 border-t">
             <div className="container mx-auto max-w-2xl px-4">
@@ -214,7 +234,6 @@ export function ToolPage({ tool }: ToolPageProps) {
           </section>
         )}
 
-        {/* Related Tools */}
         {relatedTools.length > 0 && (
           <section className="py-14 bg-muted/30 border-t">
             <div className="container mx-auto max-w-5xl px-4">
@@ -223,11 +242,7 @@ export function ToolPage({ tool }: ToolPageProps) {
                 {relatedTools.map((t) => {
                   const RelIcon = (Icons as unknown as Record<string, Icons.LucideIcon>)[t.icon] ?? Icons.FileText;
                   return (
-                    <Link
-                      key={t.id}
-                      href={`/${t.slug}`}
-                      className="tool-card flex items-center gap-3 rounded-xl border bg-card p-4 hover:border-primary/50"
-                    >
+                    <Link key={t.id} href={`/${t.slug}`} className="tool-card flex items-center gap-3 rounded-xl border bg-card p-4 hover:border-primary/50">
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg" style={{ backgroundColor: t.bgColor }}>
                         <RelIcon className="h-5 w-5" style={{ color: t.color }} />
                       </div>
@@ -243,7 +258,6 @@ export function ToolPage({ tool }: ToolPageProps) {
           </section>
         )}
 
-        {/* Bottom CTA */}
         <section className="py-14 border-t">
           <div className="container mx-auto max-w-xl px-4 text-center">
             <h2 className="mb-3 text-2xl font-bold">Ready to get started?</h2>
@@ -260,11 +274,7 @@ export function ToolPage({ tool }: ToolPageProps) {
         </section>
       </div>
 
-      <PaywallModal
-        open={showPaywall}
-        onClose={() => setShowPaywall(false)}
-        toolName={tool.name}
-      />
+      <PaywallModal open={showPaywall} onClose={() => setShowPaywall(false)} toolName={tool.name} />
     </>
   );
 }

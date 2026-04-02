@@ -559,18 +559,23 @@ export const EDITOR_TOOL_MAP: Record<string, string> = {
   "delete-pages":  "delete-page",
 };
 
-// ─── Coming-soon tools ────────────────────────────────────────────────────────
-// These require server-side PDF processing and are not yet implemented.
-export const COMING_SOON_TOOLS = new Set([
+// ─── Client-side processor tools ─────────────────────────────────────────────
+// These tools run entirely in the browser using pdf-lib / pdfjs-dist.
+export const CLIENT_PROCESSOR_TOOLS = new Set([
   "merge-pdf",
   "split-pdf",
   "compress-pdf",
   "reorder-pages",
-  "pdf-to-word",
   "pdf-to-jpg",
   "pdf-to-png",
-  "word-to-pdf",
   "jpg-to-pdf",
+]);
+
+// ─── Coming-soon tools ────────────────────────────────────────────────────────
+// Require server-side processing (LibreOffice, OCR, etc.) — not yet implemented.
+export const COMING_SOON_TOOLS = new Set([
+  "pdf-to-word",
+  "word-to-pdf",
   "excel-to-pdf",
   "ppt-to-pdf",
 ]);
