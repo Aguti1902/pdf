@@ -97,7 +97,6 @@ export async function createCheckoutSession({
 export async function createEmbeddedCheckoutSession({
   customerId,
   priceId,
-  trialFeePriceId,
   trialDays,
   returnUrl,
   metadata,
@@ -105,7 +104,6 @@ export async function createEmbeddedCheckoutSession({
 }: {
   customerId:       string;
   priceId:          string;
-  trialFeePriceId?: string;
   trialDays?:       number;
   returnUrl:        string;
   metadata?:        Record<string, string>;
@@ -123,34 +121,20 @@ export async function createEmbeddedCheckoutSession({
       }
     : { price: priceId, quantity: 1 };
 
-  const trialFeeItem = currencyPricing
-    ? [{
-        price_data: {
-          currency:     currencyPricing.currency.toLowerCase(),
-          product_data: { name: `PDFCraft — ${trialDays ?? 2}-Day Trial` },
-          unit_amount:  Math.round(currencyPricing.trialAmount * 100),
-        },
-        quantity: 1,
-      }]
-    : trialFeePriceId
-    ? [{ price: trialFeePriceId, quantity: 1 }]
-    : [];
-
+  // Note: embedded checkout does NOT support add_invoice_items or payment_method_types.
+  // Trial fee is omitted in embedded mode; subscription trial period still applies.
   return stripe.checkout.sessions.create({
-    customer:             customerId,
-    mode:                 "subscription",
-    ui_mode:              "embedded",
-    return_url:           returnUrl,
-    payment_method_types: ["card"],
-    line_items:           [subscriptionLineItem],
-    ...(trialFeeItem.length > 0 && { add_invoice_items: trialFeeItem }),
+    customer:   customerId,
+    mode:       "subscription",
+    ui_mode:    "embedded",
+    return_url: returnUrl,
+    line_items: [subscriptionLineItem],
     subscription_data: {
       trial_period_days: trialDays,
       metadata:          metadata ?? {},
     },
     billing_address_collection: "required",
-    customer_update:            { address: "auto" },
-    locale:                     "auto",
+    locale: "auto",
   });
 }
 

@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Loader2, X } from "lucide-react";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { Loader2, X, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { loadStripe } from "@stripe/stripe-js";
 import { EmbeddedCheckout, EmbeddedCheckoutProvider } from "@stripe/react-stripe-js";
@@ -34,16 +35,15 @@ export function PaywallModal({ open, onClose, toolName: _toolName, userEmail, us
   const [currency, setCurrency]           = useState<CurrencyCode>(defaultCurrency);
   const [clientSecret, setClientSecret]   = useState<string | null>(null);
   const [loadingSecret, setLoadingSecret] = useState(false);
-  const fetchedKey = useRef<string>("");  // tracks last fetched currency to avoid duplicate calls
+  const fetchedKey = useRef<string>("");
 
-  // Sync default currency to locale
   useEffect(() => {
     setCurrency(LOCALE_CURRENCY[locale] ?? DEFAULT_CURRENCY);
   }, [locale]);
 
   const fetchClientSecret = useCallback(async (curr: CurrencyCode) => {
-    const key = `${curr}|${userEmail}`;
-    if (fetchedKey.current === key) return; // already fetched for this combination
+    const key = `${curr}|${userEmail ?? "guest"}`;
+    if (fetchedKey.current === key) return;
     fetchedKey.current = key;
     setLoadingSecret(true);
     setClientSecret(null);
@@ -59,26 +59,23 @@ export function PaywallModal({ open, onClose, toolName: _toolName, userEmail, us
       setClientSecret(cs);
     } catch (err) {
       console.error(err);
-      toast.error("Could not load checkout. Please try again.");
-      fetchedKey.current = ""; // allow retry
+      toast.error("No se pudo cargar el pago. Inténtalo de nuevo.");
+      fetchedKey.current = "";
     } finally {
       setLoadingSecret(false);
     }
   }, [userEmail, userName]);
 
-  // Fetch session when modal opens or currency changes
   useEffect(() => {
     if (!open) {
-      // Reset on close so next open creates a fresh session
       setClientSecret(null);
       fetchedKey.current = "";
       return;
     }
-    fetchClientSecret(currency);
+    fetchClientSecret(LOCALE_CURRENCY[locale] ?? DEFAULT_CURRENCY);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  // When currency changes after modal is open, reset and fetch new session
   const handleCurrencyChange = (newCurrency: CurrencyCode) => {
     setCurrency(newCurrency);
     fetchedKey.current = "";
@@ -91,13 +88,25 @@ export function PaywallModal({ open, onClose, toolName: _toolName, userEmail, us
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent
-        className="max-w-md gap-0 overflow-hidden rounded-2xl border border-border p-0 shadow-2xl"
-        // Remove default close button so we can place our own
         hideCloseButton
+        className="max-w-md gap-0 overflow-hidden rounded-2xl border border-border p-0 shadow-2xl"
+        aria-describedby={undefined}
       >
-        {/* Header row: currency selector + close */}
-        <div className="flex items-center justify-between border-b border-border px-5 py-3">
-          <CurrencySelector value={currency} onChange={handleCurrencyChange} />
+        <VisuallyHidden>
+          <DialogTitle>Activar suscripción PDFCraft</DialogTitle>
+        </VisuallyHidden>
+
+        {/* Compact header: currency + close */}
+        <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
+          <div className="flex items-center gap-3">
+            <CurrencySelector value={currency} onChange={handleCurrencyChange} />
+            {/* Inline price summary — very compact */}
+            <span className="text-xs text-muted-foreground">
+              <span className="font-bold text-foreground">{curr.trialLabel}</span>
+              {" hoy · luego "}
+              <span className="font-semibold text-foreground">{curr.monthlyLabel}/mes</span>
+            </span>
+          </div>
           <button
             onClick={onClose}
             className="rounded-full p-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground"
@@ -106,36 +115,19 @@ export function PaywallModal({ open, onClose, toolName: _toolName, userEmail, us
           </button>
         </div>
 
-        {/* Price summary strip */}
-        <div className="grid grid-cols-2 divide-x divide-border border-b border-border">
-          <div className="flex flex-col items-center px-5 py-5">
-            <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Hoy</p>
-            <p className="text-3xl font-extrabold tracking-tight">{curr.trialLabel}</p>
-            <p className="mt-1 text-xs text-muted-foreground">Prueba 2 días</p>
-          </div>
-          <div className="flex flex-col items-center px-5 py-5">
-            <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Luego</p>
-            <p className="text-3xl font-extrabold tracking-tight">{curr.monthlyLabel}</p>
-            <p className="mt-1 text-xs text-muted-foreground">/ mes</p>
-          </div>
-        </div>
-
-        {/* Embedded Stripe checkout */}
-        <div className="min-h-[300px]">
+        {/* Stripe embedded checkout — takes all the space */}
+        <div className="min-h-[380px] w-full">
           {loadingSecret ? (
-            <div className="flex h-64 flex-col items-center justify-center gap-3 text-muted-foreground">
+            <div className="flex h-72 flex-col items-center justify-center gap-3 text-muted-foreground">
               <Loader2 className="h-7 w-7 animate-spin text-primary" />
               <p className="text-sm">Cargando pago seguro…</p>
             </div>
           ) : clientSecret ? (
-            <EmbeddedCheckoutProvider
-              stripe={stripePromise}
-              options={{ clientSecret }}
-            >
-              <EmbeddedCheckout className="w-full" />
+            <EmbeddedCheckoutProvider stripe={stripePromise} options={{ clientSecret }}>
+              <EmbeddedCheckout />
             </EmbeddedCheckoutProvider>
           ) : (
-            <div className="flex h-64 flex-col items-center justify-center gap-3 text-muted-foreground">
+            <div className="flex h-72 flex-col items-center justify-center gap-3 text-muted-foreground">
               <p className="text-sm">No se pudo cargar el formulario de pago.</p>
               <button
                 className="text-xs underline hover:text-foreground"
@@ -147,14 +139,15 @@ export function PaywallModal({ open, onClose, toolName: _toolName, userEmail, us
           )}
         </div>
 
-        {/* Fine print */}
-        <div className="border-t border-border bg-muted/20 px-5 py-2.5 text-center">
-          <p className="text-[10px] leading-relaxed text-muted-foreground/60">
-            Suscripción mensual recurrente de {curr.monthlyLabel}/mes tras la prueba.{" "}
-            <Link href="/legal/subscription" className="underline underline-offset-2 hover:text-foreground/60">
-              Ver términos
-            </Link>
-          </p>
+        {/* Ultra-minimal fine print */}
+        <div className="border-t border-border bg-muted/20 px-4 py-2 text-center">
+          <div className="flex items-center justify-center gap-1.5">
+            <ShieldCheck className="h-3 w-3 text-green-500 shrink-0" />
+            <p className="text-[10px] text-muted-foreground/60">
+              Suscripción mensual recurrente. Cancela cuando quieras.{" "}
+              <Link href="/legal/subscription" className="underline hover:text-foreground/60">Términos</Link>
+            </p>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

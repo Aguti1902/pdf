@@ -20,10 +20,9 @@ export async function POST(req: NextRequest) {
     const customer = await createStripeCustomer(email, name);
 
     const session = await createEmbeddedCheckoutSession({
-      customerId:      customer.id,
-      priceId:         PRICING.monthly.stripePriceId,
-      trialFeePriceId: PRICING.trial.stripePriceId,
-      trialDays:       PRICING.trial.days,
+      customerId: customer.id,
+      priceId:    PRICING.monthly.stripePriceId,
+      trialDays:  PRICING.trial.days,
       returnUrl:       `${SITE.url}/dashboard?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
       metadata:        { source: "web_embedded", userEmail: email, currency: currencyCode },
       ...(!isDefaultCurrency && {
