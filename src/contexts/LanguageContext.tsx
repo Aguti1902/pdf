@@ -4,6 +4,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import {
   type Locale,
   type Messages,
+  locales,
   defaultLocale,
   setCookieLocale,
   getMessages,
@@ -23,6 +24,13 @@ const LanguageContext = createContext<LanguageContextValue>({
   t: () => ({}) as never,
 });
 
+function getLocaleFromUrl(): Locale | null {
+  if (typeof window === "undefined") return null;
+  const match = window.location.pathname.match(/^\/(en|es|fr|de|it|uk|ru)(\/|$)/);
+  const val = match?.[1] as Locale | undefined;
+  return val && locales.includes(val) ? val : null;
+}
+
 export function LanguageProvider({
   children,
   initialLocale = defaultLocale,
@@ -33,9 +41,19 @@ export function LanguageProvider({
   const [locale, setLocaleState] = useState<Locale>(initialLocale);
   const [messages, setMessages] = useState<Messages | null>(null);
 
-  // Load messages for the initial locale immediately
   useEffect(() => {
-    getMessages(initialLocale).then(setMessages);
+    // Priority: URL slug > server-side cookie (initialLocale)
+    const urlLocale = getLocaleFromUrl();
+    const targetLocale = urlLocale ?? initialLocale;
+
+    setLocaleState(targetLocale);
+
+    // Sync cookie if URL locale differs from what the server knew
+    if (urlLocale && urlLocale !== initialLocale) {
+      setCookieLocale(urlLocale);
+    }
+
+    getMessages(targetLocale).then(setMessages);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const setLocale = useCallback((newLocale: Locale) => {

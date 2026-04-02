@@ -9,19 +9,32 @@ import {
 import { Button } from "@/components/ui/button";
 import { ChevronDown, Globe } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { locales, localeLabels, localeFlags, type Locale } from "@/lib/i18n";
+import { locales, localeLabels, localeFlags, setCookieLocale, type Locale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 
 export function LanguageSwitcher({ compact = false }: { compact?: boolean }) {
   const { locale } = useLanguage();
   const pathname = usePathname();
-  const router = useRouter();
 
   const handleSelect = (newLocale: Locale) => {
-    // Navigate to /{locale}{currentPath} — middleware will rewrite + set cookie
-    const target = newLocale === "en" ? pathname : `/${newLocale}${pathname}`;
-    router.push(target);
+    if (newLocale === locale) return;
+
+    // Strip any existing locale prefix from the current pathname
+    let cleanPath = pathname ?? "/";
+    for (const l of locales) {
+      if (cleanPath === `/${l}` || cleanPath.startsWith(`/${l}/`)) {
+        cleanPath = cleanPath.slice(l.length + 1) || "/";
+        break;
+      }
+    }
+
+    // Set cookie BEFORE navigating so the server-side layout reads it on reload
+    setCookieLocale(newLocale);
+
+    // Navigate to slug URL — full page reload so root layout re-runs with new cookie
+    const target = newLocale === "en" ? cleanPath : `/${newLocale}${cleanPath}`;
+    window.location.href = target;
   };
 
   return (
