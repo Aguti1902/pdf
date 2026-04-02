@@ -43,6 +43,7 @@ model Subscription {
   userId                 String             @unique
   user                   User               @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  stripeCustomerId       String?
   stripeSubscriptionId   String             @unique
   stripePriceId          String
   stripeCurrentPeriodStart DateTime
@@ -67,6 +68,7 @@ enum SubscriptionStatus {
   incomplete
   incomplete_expired
   unpaid
+  paused
 }
 
 enum PlanType {
@@ -247,7 +249,7 @@ model BlogPost {
   excerpt     String
   content     String
   coverImage  String?
-  author      String   @default("DocForge Team")
+  author      String   @default("PDFCraft Team")
   tags        String[]
   published   Boolean  @default(false)
   publishedAt DateTime?
