@@ -95,6 +95,8 @@ export function EditorLayout() {
   const [showAuth,      setShowAuth]      = useState(false);
   const [showPaywall,   setShowPaywall]   = useState(false);
   const [showSignModal, setShowSignModal] = useState(false);
+  const [userEmail,     setUserEmail]     = useState("");
+  const [userName,      setUserName]      = useState("");
 
   // Refs
   const isMouseDown        = useRef(false);
@@ -313,7 +315,9 @@ export function EditorLayout() {
   const startDownload = () => {
     if (!isPremium) setShowAuth(true);
   };
-  const onAuthSuccess = () => {
+  const onAuthSuccess = (email: string, name: string) => {
+    setUserEmail(email);
+    setUserName(name);
     setShowAuth(false);
     setShowPaywall(true);
   };
@@ -521,7 +525,7 @@ export function EditorLayout() {
 
       {/* ── Modals ── */}
       <AuthModal    open={showAuth}    onClose={() => setShowAuth(false)}  onSuccess={onAuthSuccess} />
-      <PaywallModal open={showPaywall} onClose={() => setShowPaywall(false)} toolName="Download PDF" />
+      <PaywallModal open={showPaywall} onClose={() => setShowPaywall(false)} toolName="Download PDF" userEmail={userEmail} userName={userName} />
       {showSignModal && <SignatureModal onConfirm={handleSignaturePlaced} onClose={() => setShowSignModal(false)} />}
     </div>
   );

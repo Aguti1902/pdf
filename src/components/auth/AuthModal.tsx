@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 interface AuthModalProps {
   open: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (email: string, name: string) => void;
 }
 
 export function AuthModal({ open, onClose, onSuccess }: AuthModalProps) {
@@ -28,14 +28,15 @@ export function AuthModal({ open, onClose, onSuccess }: AuthModalProps) {
     setLoading(true);
     await new Promise(r => setTimeout(r, 900));
     setLoading(false);
-    onSuccess();
+    onSuccess(email, name || email.split("@")[0]);
   };
 
   const handleGoogle = async () => {
     setLoading(true);
     await new Promise(r => setTimeout(r, 600));
     setLoading(false);
-    onSuccess();
+    // In real implementation: get email from Google OAuth provider
+    onSuccess("google@user.com", "Google User");
   };
 
   return (
