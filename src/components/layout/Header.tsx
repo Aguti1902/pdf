@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -34,6 +35,9 @@ import {
   FileJson,
   Table,
   Monitor,
+  LayoutDashboard,
+  LogOut,
+  User,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LanguageSwitcher } from "@/components/shared/LanguageSwitcher";
@@ -78,11 +82,34 @@ const toolsMenuConfig = [
   },
 ];
 
+interface UserInfo {
+  email: string;
+  name?: string;
+}
+
 export function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [user, setUser] = useState<UserInfo | null>(null);
   const { t, messages } = useLanguage();
   const nav = messages ? t("nav") : null;
   const tools = messages ? t("tools") : null;
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data?.user) setUser(data.user); })
+      .catch(() => {});
+  }, []);
+
+  const handleLogout = async () => {
+    await fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
+    setUser(null);
+    window.location.href = "/";
+  };
+
+  const userInitial = user?.name
+    ? user.name.charAt(0).toUpperCase()
+    : user?.email?.charAt(0).toUpperCase() ?? "U";
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/60 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
@@ -146,15 +173,63 @@ export function Header() {
         {/* Desktop CTA */}
         <div className="hidden items-center gap-1 md:flex">
           <LanguageSwitcher />
-          <Button variant="ghost" size="sm" asChild>
-            <Link href="/login">{nav?.signIn ?? "Sign In"}</Link>
-          </Button>
-          <Button size="sm" className="gap-1.5" asChild>
-            <Link href="/signup">
-              <Zap className="h-3.5 w-3.5" />
-              {nav?.getStarted ?? "Get Started"}
-            </Link>
-          </Button>
+
+          {user ? (
+            /* ── Logged-in user menu ── */
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="gap-2">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
+                    {userInitial}
+                  </span>
+                  <span className="hidden max-w-[120px] truncate text-sm lg:inline">
+                    {user.name ?? user.email}
+                  </span>
+                  <ChevronDown className="h-3 w-3 opacity-50" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                <div className="px-3 py-2">
+                  <p className="text-sm font-medium truncate">{user.name ?? "User"}</p>
+                  <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                </div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/dashboard" className="flex items-center gap-2 cursor-pointer">
+                    <LayoutDashboard className="h-4 w-4" />
+                    {nav?.dashboard ?? "Dashboard"}
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/dashboard/profile" className="flex items-center gap-2 cursor-pointer">
+                    <User className="h-4 w-4" />
+                    {nav?.profile ?? "Profile"}
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={handleLogout}
+                  className="flex items-center gap-2 cursor-pointer text-destructive focus:text-destructive"
+                >
+                  <LogOut className="h-4 w-4" />
+                  {nav?.signOut ?? "Sign Out"}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            /* ── Guest buttons ── */
+            <>
+              <Button variant="ghost" size="sm" asChild>
+                <Link href="/login">{nav?.signIn ?? "Sign In"}</Link>
+              </Button>
+              <Button size="sm" className="gap-1.5" asChild>
+                <Link href="/signup">
+                  <Zap className="h-3.5 w-3.5" />
+                  {nav?.getStarted ?? "Get Started"}
+                </Link>
+              </Button>
+            </>
+          )}
         </div>
 
         {/* Mobile Menu */}
@@ -168,6 +243,19 @@ export function Header() {
             </SheetTrigger>
             <SheetContent side="right" className="w-80 overflow-y-auto">
               <div className="mt-6 space-y-6">
+
+                {user && (
+                  <div className="flex items-center gap-3 rounded-lg bg-muted/50 px-3 py-2.5">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
+                      {userInitial}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">{user.name ?? "User"}</p>
+                      <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex flex-col gap-1">
                   <Button variant="ghost" className="justify-start" asChild>
                     <Link href="/pricing" onClick={() => setMobileOpen(false)}>
@@ -211,16 +299,37 @@ export function Header() {
                 ))}
 
                 <div className="border-t pt-4 space-y-2">
-                  <Button variant="outline" className="w-full" asChild>
-                    <Link href="/login" onClick={() => setMobileOpen(false)}>
-                      {nav?.signIn ?? "Sign In"}
-                    </Link>
-                  </Button>
-                  <Button className="w-full" asChild>
-                    <Link href="/signup" onClick={() => setMobileOpen(false)}>
-                      {nav?.getStarted ?? "Get Started"}
-                    </Link>
-                  </Button>
+                  {user ? (
+                    <>
+                      <Button variant="outline" className="w-full justify-start gap-2" asChild>
+                        <Link href="/dashboard" onClick={() => setMobileOpen(false)}>
+                          <LayoutDashboard className="h-4 w-4" />
+                          {nav?.dashboard ?? "Dashboard"}
+                        </Link>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        className="w-full justify-start gap-2 text-destructive hover:text-destructive"
+                        onClick={() => { setMobileOpen(false); handleLogout(); }}
+                      >
+                        <LogOut className="h-4 w-4" />
+                        {nav?.signOut ?? "Sign Out"}
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button variant="outline" className="w-full" asChild>
+                        <Link href="/login" onClick={() => setMobileOpen(false)}>
+                          {nav?.signIn ?? "Sign In"}
+                        </Link>
+                      </Button>
+                      <Button className="w-full" asChild>
+                        <Link href="/signup" onClick={() => setMobileOpen(false)}>
+                          {nav?.getStarted ?? "Get Started"}
+                        </Link>
+                      </Button>
+                    </>
+                  )}
                 </div>
               </div>
             </SheetContent>

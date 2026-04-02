@@ -7,7 +7,10 @@
     "getStarted": "Inizia",
     "editAnnotate": "Modifica e annota",
     "organize": "Organizza",
-    "convertPdf": "Converti PDF"
+    "convertPdf": "Converti PDF",
+    "dashboard": "Dashboard",
+    "profile": "Profilo",
+    "signOut": "Disconnettiti"
   },
   "tools": {
     "editPdf": "Modifica PDF",

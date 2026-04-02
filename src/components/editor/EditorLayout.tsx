@@ -429,14 +429,14 @@ export function EditorLayout() {
   };
 
   // ── Save document to dashboard ──────────────────────────────────────────────
+  // Saving is FREE for all logged-in users — no subscription required.
+  // Download is the paid action.
   const saveDocument = useCallback(async () => {
     if (!pdfFile || !pdfUrl) return;
     if (!userEmail) { setPendingAction("save"); setShowAuth(true); return; }
-    if (!isPremium) { setPendingAction("save"); setShowPaywall(true); return; }
 
     setIsSaving(true);
     try {
-      // Read the PDF as base64
       const arrayBuf = await pdfFile.arrayBuffer();
       const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuf)));
 
@@ -452,20 +452,19 @@ export function EditorLayout() {
           pageCount:   editorState.totalPages,
         }),
       });
-      if (res.status === 402) { setShowPaywall(true); return; }
       if (!res.ok) throw new Error();
       const { document: doc } = await res.json();
       setDocId(doc.id);
-      // Show success — dynamic import to avoid SSR issues with sonner
       const { toast } = await import("sonner");
-      toast.success("Document saved to your dashboard");
+      toast.success("Document saved! Redirecting to your dashboard…");
+      setTimeout(() => { window.location.href = "/dashboard"; }, 900);
     } catch {
       const { toast } = await import("sonner");
       toast.error("Could not save document. Please try again.");
     } finally {
       setIsSaving(false);
     }
-  }, [pdfFile, pdfUrl, userEmail, isPremium, fileName, docId, annotations, editorState.totalPages]);
+  }, [pdfFile, pdfUrl, userEmail, fileName, docId, annotations, editorState.totalPages]);
 
   // ── Download / Share flow: Auth → Paywall ─────────────────────────────────────
   const startDownload = () => {

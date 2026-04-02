@@ -34,12 +34,7 @@ export async function POST(req: NextRequest) {
 
   if (!fileData || !title) return NextResponse.json({ error: "title and fileData required" }, { status: 400 });
 
-  // Check if subscription is active/trialing to allow saving
-  const sub = await prisma.subscription.findFirst({
-    where: { userId: session.userId, status: { in: ["active", "trialing"] } },
-  });
-  if (!sub) return NextResponse.json({ error: "subscription_required" }, { status: 402 });
-
+  // Saving is free for all authenticated users — subscription is only required to DOWNLOAD.
   if (id) {
     // Update existing
     const doc = await prisma.document.update({
