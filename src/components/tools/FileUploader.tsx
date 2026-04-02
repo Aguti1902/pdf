@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { Upload, FileText, X, CheckCircle2, AlertCircle } from "lucide-react";
 import { useUpload } from "@/hooks/useUpload";
 import type { UploadedFile } from "@/types";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface FileUploaderProps {
   accept?: Record<string, string[]>;
@@ -26,12 +27,16 @@ export function FileUploader({
   accept = DEFAULT_ACCEPT,
   maxSize = 100 * 1024 * 1024,
   onUploadComplete,
-  label = "Drop your PDF here to get started",
-  description = "or click to browse · Subscription required to download",
+  label,
+  description,
   className,
 }: FileUploaderProps) {
   const { state, upload, reset } = useUpload();
   const [dragError, setDragError] = useState<string | null>(null);
+  const { t, messages } = useLanguage();
+  const hu = messages ? t("heroUpload") : null;
+  const resolvedLabel = label ?? hu?.dropLabel ?? "Drop your PDF here to get started";
+  const resolvedDesc = description ?? hu?.dropDesc ?? "or click to browse · No account needed";
 
   const onDrop = useCallback(
     async (accepted: File[], rejected: import("react-dropzone").FileRejection[]) => {
@@ -114,8 +119,8 @@ export function FileUploader({
       </div>
 
       <div>
-        <p className="font-semibold">{isDragActive ? "Drop it here!" : label}</p>
-        <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+        <p className="font-semibold">{isDragActive ? "Drop it here!" : resolvedLabel}</p>
+        <p className="mt-1 text-sm text-muted-foreground">{resolvedDesc}</p>
       </div>
 
       {(state.status === "error" || dragError) && (
@@ -126,11 +131,11 @@ export function FileUploader({
       )}
 
       <Button size="sm" className="mt-1" disabled={isDragActive}>
-        Select File
+        {hu?.selectFile ?? "Select File"}
       </Button>
 
       <p className="text-xs text-muted-foreground">
-        🔒 Your files are encrypted and auto-deleted after 2 hours
+        🔒 {hu?.encrypted ?? "Your files are encrypted and auto-deleted after 2 hours"}
       </p>
     </div>
   );

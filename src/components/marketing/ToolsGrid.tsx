@@ -4,15 +4,7 @@ import Link from "next/link";
 import { tools, toolsByCategory } from "@/config/tools";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import * as Icons from "lucide-react";
-import { cn } from "@/lib/utils";
-
-const CATEGORY_LABELS: Record<string, string> = {
-  all: "All Tools",
-  edit: "Edit & Sign",
-  organize: "Organize",
-  "convert-from": "PDF to ...",
-  "convert-to": "... to PDF",
-};
+import { useLanguage } from "@/contexts/LanguageContext";
 
 function ToolCard({ tool }: { tool: (typeof tools)[0] }) {
   const IconComponent = (Icons as unknown as Record<string, Icons.LucideIcon>)[tool.icon] ?? Icons.FileText;
@@ -39,15 +31,26 @@ function ToolCard({ tool }: { tool: (typeof tools)[0] }) {
 }
 
 export function ToolsGrid() {
+  const { t, messages } = useLanguage();
+  const tg = messages ? t("toolsGrid") : null;
+
+  const CATEGORY_LABELS: Record<string, string> = {
+    all: tg?.allTools ?? "All Tools",
+    edit: tg?.editSign ?? "Edit & Sign",
+    organize: tg?.organize ?? "Organize",
+    "convert-from": tg?.pdfTo ?? "PDF to ...",
+    "convert-to": tg?.toPdf ?? "... to PDF",
+  };
+
   return (
     <section id="tools" className="py-20 border-t">
       <div className="container mx-auto max-w-7xl px-4">
         <div className="mb-12 text-center">
           <h2 className="mb-3 text-3xl font-extrabold tracking-tight lg:text-4xl">
-            Everything you need for PDFs
+            {tg?.title ?? "Everything you need for PDFs"}
           </h2>
           <p className="mx-auto max-w-xl text-muted-foreground">
-            21 professional PDF tools in one place. All free to try, no software required.
+            {tg?.subtitle ?? "21 professional PDF tools in one place. No software required."}
           </p>
         </div>
 

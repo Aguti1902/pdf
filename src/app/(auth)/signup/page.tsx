@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
@@ -18,16 +19,21 @@ import { FileText, Lock, Eye, EyeOff, Check } from "lucide-react";
 import { signUpSchema, type SignUpInput } from "@/lib/validations";
 import { toast } from "sonner";
 import { SITE } from "@/config/seo";
-
-const perks = [
-  "Free access to all PDF tools",
-  "Try edit, sign, convert and more",
-  "No credit card required to start",
-];
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function SignUpPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
+  const { t, messages } = useLanguage();
+  const s = messages ? t("signup") : null;
+
+  const perksKeys = ["perk1", "perk2", "perk3"] as const;
+  const defaultPerks = [
+    "Free access to all PDF tools",
+    "Try edit, sign, convert and more",
+    "No credit card required to start",
+  ];
 
   const form = useForm<SignUpInput>({
     resolver: zodResolver(signUpSchema),
@@ -37,11 +43,17 @@ export default function SignUpPage() {
   const onSubmit = async (data: SignUpInput) => {
     setLoading(true);
     try {
-      // TODO: implement auth
-      await new Promise((r) => setTimeout(r, 1000));
-      toast.success("Account created! Welcome to PDFCraft.");
-    } catch {
-      toast.error("Something went wrong. Please try again.");
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Registration failed");
+      toast.success(`Welcome to ${SITE.name}!`);
+      router.push("/dashboard");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Something went wrong.");
     } finally {
       setLoading(false);
     }
@@ -58,15 +70,15 @@ export default function SignUpPage() {
             <span className="gradient-text">{SITE.name}</span>
           </Link>
 
-          <h1 className="mb-1 text-2xl font-bold">Create your account</h1>
+          <h1 className="mb-1 text-2xl font-bold">{s?.title ?? "Create your account"}</h1>
           <p className="mb-2 text-sm text-muted-foreground">
-            Get started for free — no credit card required.
+            {s?.subtitle ?? "Get started for free — no credit card required."}
           </p>
           <ul className="mb-6 space-y-1">
-            {perks.map((p) => (
-              <li key={p} className="flex items-center gap-2 text-xs text-muted-foreground">
+            {perksKeys.map((k, i) => (
+              <li key={k} className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Check className="h-3.5 w-3.5 text-green-500" />
-                {p}
+                {s?.[k] ?? defaultPerks[i]}
               </li>
             ))}
           </ul>
@@ -78,7 +90,7 @@ export default function SignUpPage() {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Full Name</FormLabel>
+                    <FormLabel>{s?.fullName ?? "Full Name"}</FormLabel>
                     <FormControl>
                       <Input placeholder="Alex Johnson" {...field} />
                     </FormControl>
@@ -91,7 +103,7 @@ export default function SignUpPage() {
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email</FormLabel>
+                    <FormLabel>{s?.email ?? "Email"}</FormLabel>
                     <FormControl>
                       <Input type="email" placeholder="you@example.com" {...field} />
                     </FormControl>
@@ -104,7 +116,7 @@ export default function SignUpPage() {
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Password</FormLabel>
+                    <FormLabel>{s?.password ?? "Password"}</FormLabel>
                     <FormControl>
                       <div className="relative">
                         <Input
@@ -127,27 +139,28 @@ export default function SignUpPage() {
               />
 
               <Button type="submit" size="lg" className="w-full" disabled={loading}>
-                {loading ? "Creating account..." : "Create Free Account"}
+                {loading ? (s?.creating ?? "Creating account...") : (s?.createBtn ?? "Create Free Account")}
               </Button>
             </form>
           </Form>
 
           <p className="mt-4 text-center text-xs text-muted-foreground">
-            By creating an account you agree to our{" "}
-            <Link href="/legal/terms" className="underline">Terms</Link> and{" "}
-            <Link href="/legal/privacy" className="underline">Privacy Policy</Link>.
+            {s?.terms ?? "By creating an account you agree to our"}{" "}
+            <Link href="/legal/terms" className="underline">{s?.termsLink ?? "Terms"}</Link>{" "}
+            {"and"}{" "}
+            <Link href="/legal/privacy" className="underline">{s?.privacyLink ?? "Privacy Policy"}</Link>.
           </p>
 
           <p className="mt-5 text-center text-sm text-muted-foreground">
-            Already have an account?{" "}
+            {s?.alreadyHave ?? "Already have an account?"}{" "}
             <Link href="/login" className="font-medium text-primary hover:underline">
-              Sign in
+              {s?.signInLink ?? "Sign in"}
             </Link>
           </p>
 
           <div className="mt-4 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
             <Lock className="h-3 w-3" />
-            <span>Secured with 256-bit SSL encryption</span>
+            <span>{s?.ssl ?? "Secured with 256-bit SSL encryption"}</span>
           </div>
         </div>
       </div>
@@ -159,9 +172,9 @@ export default function SignUpPage() {
               <FileText className="h-8 w-8" />
             </div>
           </div>
-          <h2 className="mb-3 text-2xl font-bold">Start working with PDFs today</h2>
+          <h2 className="mb-3 text-2xl font-bold">{s?.sideTitle ?? "Start working with PDFs today"}</h2>
           <p className="text-sm opacity-80">
-            Join 500,000+ professionals who use {SITE.name} to edit, sign, and convert PDFs daily.
+            {s?.sideSubtitle ?? `Join 500,000+ professionals who use ${SITE.name} to edit, sign, and convert PDFs daily.`}
           </p>
         </div>
       </div>

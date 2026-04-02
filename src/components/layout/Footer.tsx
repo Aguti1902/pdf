@@ -83,7 +83,7 @@ export function Footer() {
 
         {/* Bottom bar */}
         <div className="mt-10 border-t pt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between text-xs text-muted-foreground">
-          <p>Secure processing · Files deleted after 2 hours · SSL encrypted</p>
+          <p>{(messages ? t("trust") : null)?.secureBar ?? "Secure processing · Files deleted after 2 hours · SSL encrypted"}</p>
           <div className="flex items-center gap-4">
             <Link href="/legal/privacy" className="hover:text-foreground">
               {footer?.privacy ?? "Privacy"}
