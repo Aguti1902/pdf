@@ -1,14 +1,4 @@
-import { Header } from "@/components/layout/Header";
-
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return (
-    <>
-      <Header />
-      {children}
-    </>
-  );
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  // No global Header here — DashboardShell has its own dark sidebar
+  return <>{children}</>;
 }

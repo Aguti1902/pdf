@@ -1,165 +1,183 @@
 import { DashboardShell } from "@/components/layout/DashboardShell";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import {
-  FileText,
-  Download,
-  Clock,
-  TrendingUp,
-  ArrowRight,
-  Plus,
+  FileText, Download, Pencil, MoreVertical,
+  FolderPlus, Clock, TrendingUp, Zap,
 } from "lucide-react";
-import Link from "next/link";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Dashboard – PDFCraft",
+  title: "My Documents – PDFCraft",
   robots: { index: false, follow: false },
 };
 
-// Mock data — replace with real DB queries
 const mockUser = {
   name: "Alex Johnson",
-  email: "alex@example.com",
+  email: "agutierrezgomez00@gmail.com",
   subscriptionStatus: "trialing",
 };
 
-const recentFiles = [
-  { id: "1", name: "Contract_Q1_2026.pdf", tool: "Sign PDF", date: "2 hours ago", size: "245 KB" },
-  { id: "2", name: "Invoice_March.pdf", tool: "Compress PDF", date: "Yesterday", size: "1.2 MB → 180 KB" },
-  { id: "3", name: "Presentation.pptx", tool: "PPT to PDF", date: "2 days ago", size: "3.8 MB" },
-  { id: "4", name: "Report_Annual.pdf", tool: "PDF to Word", date: "3 days ago", size: "512 KB" },
+const mockDocuments = [
+  { id: "1", name: "2653 DENTAL VELA SEGALA SOCIEDAD CIVIL PROFE...", updatedAt: "01-04-2026 22:29", size: "24.4 KB", expiresIn: "10:00" },
+  { id: "2", name: "Contract_Q1_2026.pdf",                              updatedAt: "01-04-2026 18:14", size: "245 KB",  expiresIn: "6:22" },
+  { id: "3", name: "Invoice_March_2026.pdf",                            updatedAt: "31-03-2026 09:55", size: "1.2 MB",  expiresIn: null },
 ];
 
 export default function DashboardPage() {
   return (
     <DashboardShell user={mockUser}>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">
-              Welcome back, {mockUser.name.split(" ")[0]} 👋
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Here&apos;s what&apos;s happening with your account.
-            </p>
-          </div>
-          <Button className="gap-2" asChild>
-            <Link href="/edit-pdf">
-              <Plus className="h-4 w-4" /> New Document
-            </Link>
+      <div className="min-h-full">
+        {/* ── Top bar ── */}
+        <div className="flex items-center justify-between border-b px-8 py-5">
+          <h1 className="text-xl font-bold text-neutral-900">My documents</h1>
+          <Button className="gap-2 bg-neutral-900 hover:bg-neutral-800 text-white rounded-md px-4 h-9 text-sm font-medium">
+            Create New
           </Button>
         </div>
 
-        {/* Subscription status banner */}
-        <div className="rounded-xl border-2 border-primary/20 bg-primary/5 p-4">
-          <div className="flex items-center justify-between flex-wrap gap-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
-                  Trial Active
-                </Badge>
-                <span className="text-sm font-medium">5 days remaining in trial</span>
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Your trial ends on Apr 8, 2026. After that, you&apos;ll be billed $9.99/month.
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <Button size="sm" variant="outline" asChild>
-                <Link href="/dashboard/billing">Manage</Link>
-              </Button>
-              <Button size="sm" asChild>
-                <Link href="/dashboard/billing">Upgrade Now</Link>
-              </Button>
-            </div>
-          </div>
-          <Progress value={71} className="mt-3 h-1.5" />
-          <p className="text-xs text-muted-foreground mt-1">5 of 7 trial days used</p>
-        </div>
+        <div className="px-8 py-6 space-y-8">
 
-        {/* Stats */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            { label: "Files Processed", value: "12", icon: FileText, change: "+3 this week" },
-            { label: "Downloads", value: "8", icon: Download, change: "This month" },
-            { label: "Storage Used", value: "0 MB", icon: TrendingUp, change: "Auto-deleted" },
-            { label: "Days Remaining", value: "5", icon: Clock, change: "Trial period" },
-          ].map((stat) => (
-            <Card key={stat.label}>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  {stat.label}
-                </CardTitle>
-                <stat.icon className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stat.value}</div>
-                <p className="text-xs text-muted-foreground mt-1">{stat.change}</p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* Recent files */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-base">Recent Files</CardTitle>
-            <Button variant="ghost" size="sm" className="gap-1 text-xs" asChild>
-              <Link href="/dashboard/history">
-                View all <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
-            </Button>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="divide-y">
-              {recentFiles.map((file) => (
-                <div key={file.id} className="flex items-center gap-4 px-6 py-3 hover:bg-muted/30">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                    <FileText className="h-4 w-4 text-primary" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="truncate text-sm font-medium">{file.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {file.tool} · {file.size}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground whitespace-nowrap">{file.date}</span>
-                    <Button variant="ghost" size="icon" className="h-7 w-7">
-                      <Download className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
+          {/* ── Upgrade banner ── */}
+          {mockUser.subscriptionStatus !== "active" && (
+            <div className="relative overflow-hidden rounded-xl bg-[#fff1ee] border border-[#ffd5cc] p-5 flex items-center gap-5">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <Zap className="h-4 w-4 text-[#e63946]" />
+                  <span className="text-xs font-semibold text-[#e63946] uppercase tracking-wide">Trial active</span>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Quick tools */}
-        <div>
-          <h2 className="mb-3 text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-            Quick Tools
-          </h2>
-          <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
-            {[
-              { name: "Edit PDF", href: "/edit-pdf" },
-              { name: "Sign PDF", href: "/sign-pdf" },
-              { name: "Merge PDF", href: "/merge-pdf" },
-              { name: "Compress PDF", href: "/compress-pdf" },
-              { name: "PDF to Word", href: "/pdf-to-word" },
-              { name: "Word to PDF", href: "/word-to-pdf" },
-            ].map((tool) => (
-              <Button key={tool.href} variant="outline" size="sm" className="justify-start" asChild>
-                <Link href={tool.href}>{tool.name}</Link>
+                <h2 className="text-base font-bold text-neutral-900 leading-snug">
+                  Make the most of your account
+                </h2>
+                <p className="text-sm text-neutral-600 mt-0.5">
+                  Subscribe to edit, save and <span className="font-medium">download your PDFs</span> without restrictions.
+                </p>
+              </div>
+              {/* Decorative icon */}
+              <div className="hidden sm:flex h-20 w-20 shrink-0 items-center justify-center rounded-xl bg-[#e63946]/10">
+                <FileText className="h-10 w-10 text-[#e63946]" />
+              </div>
+              <Button className="shrink-0 bg-neutral-900 hover:bg-neutral-800 text-white rounded-md px-5 h-9 text-sm font-medium">
+                Upgrade now
               </Button>
+            </div>
+          )}
+
+          {/* ── Stats row ── */}
+          <div className="grid grid-cols-3 gap-4">
+            {[
+              { icon: FileText,  label: "Documents",       value: mockDocuments.length.toString() },
+              { icon: Download,  label: "Downloads",       value: "8" },
+              { icon: Clock,     label: "Trial days left", value: "5" },
+            ].map((s) => (
+              <div key={s.label} className="rounded-xl border border-neutral-200 bg-white p-4">
+                <div className="flex items-center gap-2 text-neutral-500 mb-2">
+                  <s.icon className="h-4 w-4" />
+                  <span className="text-xs font-medium">{s.label}</span>
+                </div>
+                <p className="text-2xl font-bold text-neutral-900">{s.value}</p>
+              </div>
             ))}
           </div>
+
+          {/* ── Folders ── */}
+          <div>
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-neutral-700">Folders</h2>
+              <button className="flex items-center gap-1.5 text-xs text-neutral-500 hover:text-neutral-900 transition-colors">
+                <FolderPlus className="h-3.5 w-3.5" />
+                New folder
+              </button>
+            </div>
+            <div className="rounded-xl border border-neutral-200 bg-white py-10 text-center">
+              <FolderPlus className="mx-auto mb-2 h-8 w-8 text-neutral-300" />
+              <p className="text-sm text-neutral-400">Here you can manage your folders</p>
+              <button className="mt-3 rounded-md bg-neutral-900 px-4 py-1.5 text-xs font-medium text-white hover:bg-neutral-800 transition-colors">
+                Create Folder
+              </button>
+            </div>
+          </div>
+
+          {/* ── Documents table ── */}
+          <div>
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-neutral-700">Documents</h2>
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search..."
+                  className="rounded-lg border border-neutral-200 bg-neutral-50 pl-3 pr-3 py-1.5 text-xs text-neutral-700 placeholder:text-neutral-400 focus:outline-none focus:ring-1 focus:ring-neutral-300 w-44"
+                />
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-neutral-200 bg-white overflow-hidden">
+              {/* Table header */}
+              <div className="grid grid-cols-[auto_1fr_160px_90px_80px_120px] items-center gap-0 border-b border-neutral-100 px-4 py-2.5">
+                <input type="checkbox" className="mr-3 rounded accent-neutral-900" />
+                <span className="text-xs font-semibold text-neutral-500">Name</span>
+                <span className="text-xs font-semibold text-neutral-500">Updated Date</span>
+                <span className="text-xs font-semibold text-neutral-500">Size</span>
+                <span className="text-xs font-semibold text-neutral-500 flex items-center gap-1">
+                  <Clock className="h-3 w-3" /> Timer
+                </span>
+                <span />
+              </div>
+
+              {/* Rows */}
+              {mockDocuments.length === 0 ? (
+                <div className="py-16 text-center text-neutral-400 text-sm">
+                  No documents yet. Create or upload your first PDF.
+                </div>
+              ) : (
+                mockDocuments.map((doc, idx) => (
+                  <div
+                    key={doc.id}
+                    className={cn(
+                      "grid grid-cols-[auto_1fr_160px_90px_80px_120px] items-center gap-0 px-4 py-3 hover:bg-neutral-50 transition-colors",
+                      idx < mockDocuments.length - 1 && "border-b border-neutral-100"
+                    )}
+                  >
+                    <input type="checkbox" className="mr-3 rounded accent-neutral-900" />
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-[#e63946]/10">
+                        <FileText className="h-3.5 w-3.5 text-[#e63946]" />
+                      </div>
+                      <span className="truncate text-sm font-medium text-neutral-800">{doc.name}</span>
+                    </div>
+                    <span className="text-xs text-neutral-500">{doc.updatedAt}</span>
+                    <span className="text-xs text-neutral-500">{doc.size}</span>
+                    <div>
+                      {doc.expiresIn ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-neutral-100 px-2 py-0.5 text-[11px] font-medium text-neutral-600">
+                          <Clock className="h-2.5 w-2.5" /> {doc.expiresIn}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-neutral-300">—</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1 justify-end">
+                      <button className="flex items-center gap-1 rounded-md border border-neutral-200 bg-white px-2.5 py-1 text-xs font-medium text-neutral-700 hover:bg-neutral-50 transition-colors">
+                        <Pencil className="h-3 w-3" /> Edit
+                      </button>
+                      <button className="flex items-center gap-1 rounded-md border border-neutral-200 bg-white px-2.5 py-1 text-xs font-medium text-neutral-700 hover:bg-neutral-50 transition-colors">
+                        <Download className="h-3 w-3" /> Download
+                      </button>
+                      <button className="flex h-7 w-7 items-center justify-center rounded-md border border-neutral-200 bg-white hover:bg-neutral-50 transition-colors">
+                        <MoreVertical className="h-3.5 w-3.5 text-neutral-500" />
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
         </div>
       </div>
     </DashboardShell>
   );
+}
+
+function cn(...classes: (string | boolean | undefined)[]) {
+  return classes.filter(Boolean).join(" ");
 }
