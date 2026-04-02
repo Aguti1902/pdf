@@ -40,7 +40,7 @@ export function Hero() {
           >
             <Badge variant="secondary" className="mb-5 gap-1.5 px-3 py-1.5 text-sm">
               <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-              {hero?.social ?? "Trusted by 500,000+ users worldwide"}
+              {hero?.badge ?? "Trusted by 500,000+ users worldwide"}
             </Badge>
           </motion.div>
 
