@@ -1,0 +1,101 @@
+{
+  "nav": {
+    "tools": "Tous les outils",
+    "pricing": "Tarifs",
+    "blog": "Blog",
+    "signIn": "Se connecter",
+    "getStarted": "Commencer",
+    "editAnnotate": "Éditer et annoter",
+    "organize": "Organiser",
+    "convertPdf": "Convertir PDF"
+  },
+  "tools": {
+    "editPdf": "Éditer PDF",
+    "signPdf": "Signer PDF",
+    "fillForms": "Remplir formulaires PDF",
+    "annotate": "Annoter PDF",
+    "addText": "Ajouter du texte au PDF",
+    "highlight": "Surligner PDF",
+    "draw": "Dessiner sur PDF",
+    "addImage": "Ajouter une image au PDF",
+    "merge": "Fusionner PDF",
+    "split": "Diviser PDF",
+    "compress": "Compresser PDF",
+    "rotate": "Faire pivoter PDF",
+    "deletePages": "Supprimer des pages",
+    "reorder": "Réorganiser les pages",
+    "pdfToWord": "PDF en Word",
+    "pdfToJpg": "PDF en JPG",
+    "pdfToPng": "PDF en PNG",
+    "wordToPdf": "Word en PDF",
+    "jpgToPdf": "JPG en PDF",
+    "excelToPdf": "Excel en PDF",
+    "pptToPdf": "PPT en PDF"
+  },
+  "hero": {
+    "badge": "Éditeur PDF Professionnel",
+    "title": "Éditez, signez et convertissez des PDFs",
+    "titleHighlight": "en quelques secondes",
+    "subtitle": "La plateforme PDF tout-en-un pour les particuliers et les équipes. Éditez, annotez, signez et convertissez des PDFs sans installer de logiciel.",
+    "ctaPrimary": "Commencer gratuitement",
+    "ctaSecondary": "Voir tous les outils",
+    "social": "Plus de 500 000 utilisateurs dans le monde"
+  },
+  "pricing": {
+    "title": "Tarification simple et transparente",
+    "subtitle": "Démarrez votre essai dès aujourd'hui pour seulement 0,50 €. Accès complet, sans frais cachés.",
+    "trialBadge": "Essai de 7 jours",
+    "trialPrice": "0,50 €",
+    "monthlyPrice": "49,90 €/mois",
+    "afterTrial": "après l'essai",
+    "cta": "Démarrer l'essai — 0,50 €",
+    "cancelAnytime": "Annulez à tout moment. Sans questions."
+  },
+  "footer": {
+    "tagline": "La plateforme PDF professionnelle pour tous.",
+    "tools": "Outils",
+    "company": "Entreprise",
+    "legal": "Légal",
+    "about": "À propos",
+    "blog": "Blog",
+    "contact": "Contact",
+    "privacy": "Politique de confidentialité",
+    "terms": "Conditions d'utilisation",
+    "cookies": "Cookies",
+    "subscription": "Conditions d'abonnement",
+    "refund": "Politique de remboursement"
+  },
+  "auth": {
+    "createAccount": "Créez votre compte",
+    "welcomeBack": "Bon retour",
+    "trialSubtitle": "Démarrez votre essai de 7 jours pour 0,50 €",
+    "continueGoogle": "Continuer avec Google",
+    "or": "ou",
+    "signUp": "S'inscrire",
+    "signIn": "Se connecter",
+    "yourName": "Votre nom",
+    "emailAddress": "Adresse e-mail",
+    "password": "Mot de passe",
+    "createAndContinue": "Créer un compte et continuer",
+    "signInAndContinue": "Se connecter et continuer",
+    "terms": "En créant un compte, vous acceptez nos Conditions et notre Politique de confidentialité. Après l'essai de 7 jours (0,50 €), votre abonnement se renouvelle à 49,90 €/mois."
+  },
+  "editor": {
+    "openPdf": "Ouvrir PDF",
+    "save": "Enregistrer",
+    "download": "Télécharger",
+    "saving": "Enregistrement...",
+    "tools": {
+      "pointer": "Sélectionner / Déplacer",
+      "addText": "Ajouter du texte",
+      "draw": "Dessiner",
+      "highlight": "Surligner",
+      "shapes": "Rectangle",
+      "eraser": "Gomme",
+      "sign": "Signer",
+      "addImage": "Ajouter une image",
+      "rotatePage": "Faire pivoter la page",
+      "deletePage": "Supprimer la page"
+    }
+  }
+}

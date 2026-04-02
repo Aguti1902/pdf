@@ -1,0 +1,101 @@
+{
+  "nav": {
+    "tools": "All Tools",
+    "pricing": "Pricing",
+    "blog": "Blog",
+    "signIn": "Sign In",
+    "getStarted": "Get Started",
+    "editAnnotate": "Edit & Annotate",
+    "organize": "Organize",
+    "convertPdf": "Convert PDF"
+  },
+  "tools": {
+    "editPdf": "Edit PDF",
+    "signPdf": "Sign PDF",
+    "fillForms": "Fill PDF Forms",
+    "annotate": "Annotate PDF",
+    "addText": "Add Text to PDF",
+    "highlight": "Highlight PDF",
+    "draw": "Draw on PDF",
+    "addImage": "Add Image to PDF",
+    "merge": "Merge PDF",
+    "split": "Split PDF",
+    "compress": "Compress PDF",
+    "rotate": "Rotate PDF",
+    "deletePages": "Delete Pages",
+    "reorder": "Reorder Pages",
+    "pdfToWord": "PDF to Word",
+    "pdfToJpg": "PDF to JPG",
+    "pdfToPng": "PDF to PNG",
+    "wordToPdf": "Word to PDF",
+    "jpgToPdf": "JPG to PDF",
+    "excelToPdf": "Excel to PDF",
+    "pptToPdf": "PPT to PDF"
+  },
+  "hero": {
+    "badge": "Professional PDF Editor",
+    "title": "Edit, Sign & Convert PDFs",
+    "titleHighlight": "in seconds",
+    "subtitle": "The all-in-one PDF platform for individuals and teams. Edit, annotate, sign and convert PDFs without installing any software.",
+    "ctaPrimary": "Start Editing Free",
+    "ctaSecondary": "See all tools",
+    "social": "Trusted by 500,000+ users worldwide"
+  },
+  "pricing": {
+    "title": "Simple, transparent pricing",
+    "subtitle": "Start your trial today for just 0,50 €. Full access, no hidden fees.",
+    "trialBadge": "7-day trial",
+    "trialPrice": "0,50 €",
+    "monthlyPrice": "49,90 €/month",
+    "afterTrial": "after trial",
+    "cta": "Start trial — 0,50 €",
+    "cancelAnytime": "Cancel anytime. No questions asked."
+  },
+  "footer": {
+    "tagline": "The professional PDF platform for everyone.",
+    "tools": "Tools",
+    "company": "Company",
+    "legal": "Legal",
+    "about": "About",
+    "blog": "Blog",
+    "contact": "Contact",
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Service",
+    "cookies": "Cookies",
+    "subscription": "Subscription Terms",
+    "refund": "Refund Policy"
+  },
+  "auth": {
+    "createAccount": "Create your account",
+    "welcomeBack": "Welcome back",
+    "trialSubtitle": "Start your 7-day trial for just 0,50 €",
+    "continueGoogle": "Continue with Google",
+    "or": "or",
+    "signUp": "Sign up",
+    "signIn": "Sign in",
+    "yourName": "Your name",
+    "emailAddress": "Email address",
+    "password": "Password",
+    "createAndContinue": "Create account & continue",
+    "signInAndContinue": "Sign in & continue",
+    "terms": "By creating an account you agree to our Terms and Privacy Policy. After the 7-day trial (0,50 €), your subscription renews at 49,90 €/month."
+  },
+  "editor": {
+    "openPdf": "Open PDF",
+    "save": "Save",
+    "download": "Download",
+    "saving": "Saving...",
+    "tools": {
+      "pointer": "Select / Move",
+      "addText": "Add Text",
+      "draw": "Draw",
+      "highlight": "Highlight",
+      "shapes": "Rectangle",
+      "eraser": "Eraser",
+      "sign": "Sign",
+      "addImage": "Add Image",
+      "rotatePage": "Rotate Page",
+      "deletePage": "Delete Page"
+    }
+  }
+}

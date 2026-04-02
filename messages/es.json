@@ -1,0 +1,101 @@
+{
+  "nav": {
+    "tools": "Todas las herramientas",
+    "pricing": "Precios",
+    "blog": "Blog",
+    "signIn": "Iniciar sesión",
+    "getStarted": "Empezar",
+    "editAnnotate": "Editar y anotar",
+    "organize": "Organizar",
+    "convertPdf": "Convertir PDF"
+  },
+  "tools": {
+    "editPdf": "Editar PDF",
+    "signPdf": "Firmar PDF",
+    "fillForms": "Rellenar formularios",
+    "annotate": "Anotar PDF",
+    "addText": "Añadir texto al PDF",
+    "highlight": "Resaltar PDF",
+    "draw": "Dibujar en PDF",
+    "addImage": "Añadir imagen al PDF",
+    "merge": "Fusionar PDF",
+    "split": "Dividir PDF",
+    "compress": "Comprimir PDF",
+    "rotate": "Rotar PDF",
+    "deletePages": "Eliminar páginas",
+    "reorder": "Reordenar páginas",
+    "pdfToWord": "PDF a Word",
+    "pdfToJpg": "PDF a JPG",
+    "pdfToPng": "PDF a PNG",
+    "wordToPdf": "Word a PDF",
+    "jpgToPdf": "JPG a PDF",
+    "excelToPdf": "Excel a PDF",
+    "pptToPdf": "PPT a PDF"
+  },
+  "hero": {
+    "badge": "Editor PDF Profesional",
+    "title": "Edita, firma y convierte PDFs",
+    "titleHighlight": "en segundos",
+    "subtitle": "La plataforma PDF todo en uno para personas y equipos. Edita, anota, firma y convierte PDFs sin instalar ningún software.",
+    "ctaPrimary": "Empieza a editar gratis",
+    "ctaSecondary": "Ver todas las herramientas",
+    "social": "Más de 500.000 usuarios confían en nosotros"
+  },
+  "pricing": {
+    "title": "Precios simples y transparentes",
+    "subtitle": "Inicia tu prueba hoy por solo 0,50 €. Acceso completo, sin cargos ocultos.",
+    "trialBadge": "Prueba de 7 días",
+    "trialPrice": "0,50 €",
+    "monthlyPrice": "49,90 €/mes",
+    "afterTrial": "después del período de prueba",
+    "cta": "Iniciar prueba — 0,50 €",
+    "cancelAnytime": "Cancela cuando quieras. Sin preguntas."
+  },
+  "footer": {
+    "tagline": "La plataforma PDF profesional para todos.",
+    "tools": "Herramientas",
+    "company": "Empresa",
+    "legal": "Legal",
+    "about": "Sobre nosotros",
+    "blog": "Blog",
+    "contact": "Contacto",
+    "privacy": "Política de privacidad",
+    "terms": "Términos de servicio",
+    "cookies": "Cookies",
+    "subscription": "Términos de suscripción",
+    "refund": "Política de reembolso"
+  },
+  "auth": {
+    "createAccount": "Crea tu cuenta",
+    "welcomeBack": "Bienvenido de vuelta",
+    "trialSubtitle": "Inicia tu prueba de 7 días por solo 0,50 €",
+    "continueGoogle": "Continuar con Google",
+    "or": "o",
+    "signUp": "Registrarse",
+    "signIn": "Iniciar sesión",
+    "yourName": "Tu nombre",
+    "emailAddress": "Correo electrónico",
+    "password": "Contraseña",
+    "createAndContinue": "Crear cuenta y continuar",
+    "signInAndContinue": "Iniciar sesión y continuar",
+    "terms": "Al crear una cuenta aceptas nuestros Términos y Política de Privacidad. Tras la prueba de 7 días (0,50 €), tu suscripción se renueva por 49,90 €/mes."
+  },
+  "editor": {
+    "openPdf": "Abrir PDF",
+    "save": "Guardar",
+    "download": "Descargar",
+    "saving": "Guardando...",
+    "tools": {
+      "pointer": "Seleccionar / Mover",
+      "addText": "Añadir texto",
+      "draw": "Dibujar",
+      "highlight": "Resaltar",
+      "shapes": "Rectángulo",
+      "eraser": "Borrador",
+      "sign": "Firmar",
+      "addImage": "Añadir imagen",
+      "rotatePage": "Rotar página",
+      "deletePage": "Eliminar página"
+    }
+  }
+}

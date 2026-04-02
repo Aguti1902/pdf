@@ -9,10 +9,14 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import type { UploadedFile } from "@/types";
 import { useRouter } from "next/navigation";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export function Hero() {
   const [uploadedFile, setUploadedFile] = useState<UploadedFile | null>(null);
   const router = useRouter();
+  const { t, messages } = useLanguage();
+  const hero = messages ? t("hero") : null;
+  const nav = messages ? t("nav") : null;
 
   const handleUpload = (file: UploadedFile) => {
     setUploadedFile(file);
@@ -36,7 +40,7 @@ export function Hero() {
           >
             <Badge variant="secondary" className="mb-5 gap-1.5 px-3 py-1.5 text-sm">
               <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-              Trusted by 500,000+ users worldwide
+              {hero?.social ?? "Trusted by 500,000+ users worldwide"}
             </Badge>
           </motion.div>
 
@@ -46,10 +50,8 @@ export function Hero() {
             transition={{ duration: 0.4, delay: 0.05 }}
             className="mb-5 text-5xl font-extrabold tracking-tight lg:text-7xl"
           >
-            Edit, Sign &{" "}
-            <span className="gradient-text">Convert PDFs</span>
-            <br />
-            Online — Free
+            {hero?.title ?? "Edit, Sign & Convert PDFs"}{" "}
+            <span className="gradient-text">{hero?.titleHighlight ?? "in seconds"}</span>
           </motion.h1>
 
           <motion.p
@@ -58,9 +60,7 @@ export function Hero() {
             transition={{ duration: 0.4, delay: 0.1 }}
             className="mx-auto mb-10 max-w-2xl text-lg text-muted-foreground"
           >
-            The fastest way to work with PDF files. Edit text, add signatures,
-            convert formats, merge, split and compress — all in your browser.
-            No downloads, no accounts required to get started.
+            {hero?.subtitle ?? "The all-in-one PDF platform for individuals and teams. Edit, annotate, sign and convert PDFs without installing any software."}
           </motion.p>
 
           <motion.div
@@ -72,7 +72,7 @@ export function Hero() {
             <FileUploader
               onUploadComplete={handleUpload}
               label="Drop your PDF here to get started"
-              description="or click to browse · Free to try · No account needed"
+              description="or click to browse · No account needed"
               className="shadow-sm"
             />
           </motion.div>
@@ -85,11 +85,11 @@ export function Hero() {
           >
             <Button size="lg" className="gap-2" asChild>
               <Link href="/pricing">
-                Get Premium <ArrowRight className="h-4 w-4" />
+                {hero?.ctaPrimary ?? "Get Started"} <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>
             <Button size="lg" variant="outline" asChild>
-              <Link href="#tools">Explore All Tools</Link>
+              <Link href="#tools">{hero?.ctaSecondary ?? "Explore All Tools"}</Link>
             </Button>
           </motion.div>
 

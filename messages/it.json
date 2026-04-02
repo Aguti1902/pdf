@@ -1,0 +1,101 @@
+{
+  "nav": {
+    "tools": "Tutti gli strumenti",
+    "pricing": "Prezzi",
+    "blog": "Blog",
+    "signIn": "Accedi",
+    "getStarted": "Inizia",
+    "editAnnotate": "Modifica e annota",
+    "organize": "Organizza",
+    "convertPdf": "Converti PDF"
+  },
+  "tools": {
+    "editPdf": "Modifica PDF",
+    "signPdf": "Firma PDF",
+    "fillForms": "Compila moduli PDF",
+    "annotate": "Annota PDF",
+    "addText": "Aggiungi testo al PDF",
+    "highlight": "Evidenzia PDF",
+    "draw": "Disegna su PDF",
+    "addImage": "Aggiungi immagine al PDF",
+    "merge": "Unisci PDF",
+    "split": "Dividi PDF",
+    "compress": "Comprimi PDF",
+    "rotate": "Ruota PDF",
+    "deletePages": "Elimina pagine",
+    "reorder": "Riordina pagine",
+    "pdfToWord": "PDF in Word",
+    "pdfToJpg": "PDF in JPG",
+    "pdfToPng": "PDF in PNG",
+    "wordToPdf": "Word in PDF",
+    "jpgToPdf": "JPG in PDF",
+    "excelToPdf": "Excel in PDF",
+    "pptToPdf": "PPT in PDF"
+  },
+  "hero": {
+    "badge": "Editor PDF Professionale",
+    "title": "Modifica, firma e converti PDF",
+    "titleHighlight": "in pochi secondi",
+    "subtitle": "La piattaforma PDF all-in-one per individui e team. Modifica, annota, firma e converti PDF senza installare software.",
+    "ctaPrimary": "Inizia a modificare gratis",
+    "ctaSecondary": "Vedi tutti gli strumenti",
+    "social": "Oltre 500.000 utenti nel mondo"
+  },
+  "pricing": {
+    "title": "Prezzi semplici e trasparenti",
+    "subtitle": "Inizia la tua prova oggi per soli 0,50 €. Accesso completo, nessun costo nascosto.",
+    "trialBadge": "Prova di 7 giorni",
+    "trialPrice": "0,50 €",
+    "monthlyPrice": "49,90 €/mese",
+    "afterTrial": "dopo la prova",
+    "cta": "Inizia la prova — 0,50 €",
+    "cancelAnytime": "Cancella quando vuoi. Nessuna domanda."
+  },
+  "footer": {
+    "tagline": "La piattaforma PDF professionale per tutti.",
+    "tools": "Strumenti",
+    "company": "Azienda",
+    "legal": "Legale",
+    "about": "Chi siamo",
+    "blog": "Blog",
+    "contact": "Contatti",
+    "privacy": "Informativa sulla privacy",
+    "terms": "Termini di servizio",
+    "cookies": "Cookie",
+    "subscription": "Termini di abbonamento",
+    "refund": "Politica di rimborso"
+  },
+  "auth": {
+    "createAccount": "Crea il tuo account",
+    "welcomeBack": "Bentornato",
+    "trialSubtitle": "Inizia la tua prova di 7 giorni per soli 0,50 €",
+    "continueGoogle": "Continua con Google",
+    "or": "o",
+    "signUp": "Registrati",
+    "signIn": "Accedi",
+    "yourName": "Il tuo nome",
+    "emailAddress": "Indirizzo e-mail",
+    "password": "Password",
+    "createAndContinue": "Crea account e continua",
+    "signInAndContinue": "Accedi e continua",
+    "terms": "Creando un account accetti i nostri Termini e la nostra Informativa sulla privacy. Dopo la prova di 7 giorni (0,50 €), l'abbonamento si rinnova a 49,90 €/mese."
+  },
+  "editor": {
+    "openPdf": "Apri PDF",
+    "save": "Salva",
+    "download": "Scarica",
+    "saving": "Salvataggio...",
+    "tools": {
+      "pointer": "Seleziona / Sposta",
+      "addText": "Aggiungi testo",
+      "draw": "Disegna",
+      "highlight": "Evidenzia",
+      "shapes": "Rettangolo",
+      "eraser": "Gomma",
+      "sign": "Firma",
+      "addImage": "Aggiungi immagine",
+      "rotatePage": "Ruota pagina",
+      "deletePage": "Elimina pagina"
+    }
+  }
+}

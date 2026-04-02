@@ -1,33 +1,40 @@
+"use client";
+
 import Link from "next/link";
 import { FileText } from "lucide-react";
 import { SITE } from "@/config/seo";
-
-const footerLinks = {
-  Tools: [
-    { name: "Edit PDF", href: "/edit-pdf" },
-    { name: "Sign PDF", href: "/sign-pdf" },
-    { name: "Merge PDF", href: "/merge-pdf" },
-    { name: "Split PDF", href: "/split-pdf" },
-    { name: "Compress PDF", href: "/compress-pdf" },
-    { name: "PDF to Word", href: "/pdf-to-word" },
-    { name: "Word to PDF", href: "/word-to-pdf" },
-  ],
-  Product: [
-    { name: "Pricing", href: "/pricing" },
-    { name: "Blog", href: "/blog" },
-    { name: "FAQ", href: "/faq" },
-    { name: "Contact", href: "/contact" },
-  ],
-  Legal: [
-    { name: "Terms of Service", href: "/legal/terms" },
-    { name: "Privacy Policy", href: "/legal/privacy" },
-    { name: "Cookie Policy", href: "/legal/cookies" },
-    { name: "Subscription Terms", href: "/legal/subscription" },
-    { name: "Refund Policy", href: "/legal/refund" },
-  ],
-};
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export function Footer() {
+  const { t, messages } = useLanguage();
+  const nav = messages ? t("nav") : null;
+  const footer = messages ? t("footer") : null;
+  const tools = messages ? t("tools") : null;
+
+  const footerLinks = {
+    [footer?.tools ?? "Tools"]: [
+      { name: tools?.editPdf ?? "Edit PDF", href: "/edit-pdf" },
+      { name: tools?.signPdf ?? "Sign PDF", href: "/sign-pdf" },
+      { name: tools?.merge ?? "Merge PDF", href: "/merge-pdf" },
+      { name: tools?.split ?? "Split PDF", href: "/split-pdf" },
+      { name: tools?.compress ?? "Compress PDF", href: "/compress-pdf" },
+      { name: tools?.pdfToWord ?? "PDF to Word", href: "/pdf-to-word" },
+      { name: tools?.wordToPdf ?? "Word to PDF", href: "/word-to-pdf" },
+    ],
+    [footer?.company ?? "Product"]: [
+      { name: nav?.pricing ?? "Pricing", href: "/pricing" },
+      { name: nav?.blog ?? "Blog", href: "/blog" },
+      { name: footer?.contact ?? "Contact", href: "/contact" },
+    ],
+    [footer?.legal ?? "Legal"]: [
+      { name: footer?.terms ?? "Terms of Service", href: "/legal/terms" },
+      { name: footer?.privacy ?? "Privacy Policy", href: "/legal/privacy" },
+      { name: footer?.cookies ?? "Cookie Policy", href: "/legal/cookies" },
+      { name: footer?.subscription ?? "Subscription Terms", href: "/legal/subscription" },
+      { name: footer?.refund ?? "Refund Policy", href: "/legal/refund" },
+    ],
+  };
+
   return (
     <footer className="border-t bg-muted/30">
       <div className="container mx-auto max-w-7xl px-4 py-12">
@@ -41,8 +48,7 @@ export function Footer() {
               <span>{SITE.name}</span>
             </Link>
             <p className="mt-3 max-w-xs text-sm text-muted-foreground">
-              The all-in-one PDF platform. Edit, sign, convert and organize PDFs
-              online — no software installation required.
+              {footer?.tagline ?? "The professional PDF platform for everyone."}
             </p>
             <div className="mt-4 flex items-center gap-3">
               <div className="flex items-center gap-1.5 rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-700 dark:bg-green-900/20 dark:text-green-400">
@@ -77,18 +83,16 @@ export function Footer() {
 
         {/* Bottom bar */}
         <div className="mt-10 border-t pt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between text-xs text-muted-foreground">
-          <p>
-            Secure processing · Files deleted after 2 hours · SSL encrypted
-          </p>
+          <p>Secure processing · Files deleted after 2 hours · SSL encrypted</p>
           <div className="flex items-center gap-4">
             <Link href="/legal/privacy" className="hover:text-foreground">
-              Privacy
+              {footer?.privacy ?? "Privacy"}
             </Link>
             <Link href="/legal/terms" className="hover:text-foreground">
-              Terms
+              {footer?.terms ?? "Terms"}
             </Link>
             <Link href="/contact" className="hover:text-foreground">
-              Support
+              {footer?.contact ?? "Support"}
             </Link>
           </div>
         </div>

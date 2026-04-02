@@ -1,0 +1,101 @@
+{
+  "nav": {
+    "tools": "Alle Werkzeuge",
+    "pricing": "Preise",
+    "blog": "Blog",
+    "signIn": "Anmelden",
+    "getStarted": "Loslegen",
+    "editAnnotate": "Bearbeiten & Kommentieren",
+    "organize": "Organisieren",
+    "convertPdf": "PDF konvertieren"
+  },
+  "tools": {
+    "editPdf": "PDF bearbeiten",
+    "signPdf": "PDF signieren",
+    "fillForms": "PDF-Formulare ausfüllen",
+    "annotate": "PDF kommentieren",
+    "addText": "Text zu PDF hinzufügen",
+    "highlight": "PDF markieren",
+    "draw": "Auf PDF zeichnen",
+    "addImage": "Bild zu PDF hinzufügen",
+    "merge": "PDFs zusammenführen",
+    "split": "PDF teilen",
+    "compress": "PDF komprimieren",
+    "rotate": "PDF drehen",
+    "deletePages": "Seiten löschen",
+    "reorder": "Seiten neu anordnen",
+    "pdfToWord": "PDF zu Word",
+    "pdfToJpg": "PDF zu JPG",
+    "pdfToPng": "PDF zu PNG",
+    "wordToPdf": "Word zu PDF",
+    "jpgToPdf": "JPG zu PDF",
+    "excelToPdf": "Excel zu PDF",
+    "pptToPdf": "PPT zu PDF"
+  },
+  "hero": {
+    "badge": "Professioneller PDF-Editor",
+    "title": "PDFs bearbeiten, signieren und konvertieren",
+    "titleHighlight": "in Sekunden",
+    "subtitle": "Die All-in-One-PDF-Plattform für Einzelpersonen und Teams. Bearbeiten, kommentieren, signieren und konvertieren Sie PDFs ohne Software-Installation.",
+    "ctaPrimary": "Kostenlos bearbeiten",
+    "ctaSecondary": "Alle Werkzeuge anzeigen",
+    "social": "Über 500.000 Nutzer weltweit vertrauen uns"
+  },
+  "pricing": {
+    "title": "Einfache, transparente Preise",
+    "subtitle": "Starten Sie Ihre Testversion noch heute für nur 0,50 €. Vollzugang, keine versteckten Gebühren.",
+    "trialBadge": "7-Tage-Test",
+    "trialPrice": "0,50 €",
+    "monthlyPrice": "49,90 €/Monat",
+    "afterTrial": "nach dem Test",
+    "cta": "Test starten — 0,50 €",
+    "cancelAnytime": "Jederzeit kündigen. Keine Fragen."
+  },
+  "footer": {
+    "tagline": "Die professionelle PDF-Plattform für alle.",
+    "tools": "Werkzeuge",
+    "company": "Unternehmen",
+    "legal": "Rechtliches",
+    "about": "Über uns",
+    "blog": "Blog",
+    "contact": "Kontakt",
+    "privacy": "Datenschutzrichtlinie",
+    "terms": "Nutzungsbedingungen",
+    "cookies": "Cookies",
+    "subscription": "Abonnementbedingungen",
+    "refund": "Rückerstattungsrichtlinie"
+  },
+  "auth": {
+    "createAccount": "Konto erstellen",
+    "welcomeBack": "Willkommen zurück",
+    "trialSubtitle": "Starten Sie Ihren 7-Tage-Test für nur 0,50 €",
+    "continueGoogle": "Mit Google fortfahren",
+    "or": "oder",
+    "signUp": "Registrieren",
+    "signIn": "Anmelden",
+    "yourName": "Ihr Name",
+    "emailAddress": "E-Mail-Adresse",
+    "password": "Passwort",
+    "createAndContinue": "Konto erstellen und fortfahren",
+    "signInAndContinue": "Anmelden und fortfahren",
+    "terms": "Mit der Kontoerstellung stimmen Sie unseren Nutzungsbedingungen und der Datenschutzrichtlinie zu. Nach dem 7-Tage-Test (0,50 €) verlängert sich Ihr Abonnement für 49,90 €/Monat."
+  },
+  "editor": {
+    "openPdf": "PDF öffnen",
+    "save": "Speichern",
+    "download": "Herunterladen",
+    "saving": "Speichern...",
+    "tools": {
+      "pointer": "Auswählen / Verschieben",
+      "addText": "Text hinzufügen",
+      "draw": "Zeichnen",
+      "highlight": "Markieren",
+      "shapes": "Rechteck",
+      "eraser": "Radierer",
+      "sign": "Signieren",
+      "addImage": "Bild hinzufügen",
+      "rotatePage": "Seite drehen",
+      "deletePage": "Seite löschen"
+    }
+  }
+}
