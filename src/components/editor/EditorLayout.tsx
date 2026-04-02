@@ -153,17 +153,42 @@ export function EditorLayout() {
     } catch { /* offline */ }
   }, []);
 
-  // Run on mount — also restore file from sessionStorage if fileId is in URL
+  // Compute Google OAuth redirect URL for the editor (includes postAuth param)
+  const buildGoogleRedirect = useCallback((action: "download" | "save") => {
+    if (typeof window === "undefined") return "/dashboard";
+    const base = window.location.pathname + window.location.search;
+    const sep  = base.includes("?") ? "&" : "?";
+    return `${base}${sep}postAuth=${action}`;
+  }, []);
+
+  // Save current PDF to sessionStorage so it can be restored after Google OAuth
+  const persistFileForGoogleRedirect = useCallback(async () => {
+    if (!pdfFile) return;
+    try {
+      const buf = await pdfFile.arrayBuffer();
+      const bytes = new Uint8Array(buf);
+      let binary = "";
+      for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+      const dataUrl = `data:application/pdf;base64,${btoa(binary)}`;
+      sessionStorage.setItem("pdfcraft_restore", JSON.stringify({ dataUrl, name: pdfFile.name }));
+    } catch { /* sessionStorage full or unavailable */ }
+  }, [pdfFile]);
+
+  // Run on mount — restore file from sessionStorage if fileId or restore param is in URL
   useEffect(() => {
     checkSubscription();
     fetchMe();
-    const fileId = searchParams?.get("fileId");
+
+    const fileId   = searchParams?.get("fileId");
+    const postAuth = searchParams?.get("postAuth") as "download" | "save" | null;
+    const restore  = searchParams?.get("restore");
+
+    // Restore from standard fileId upload
     if (fileId) {
       try {
         const stored = sessionStorage.getItem(`pdfcraft_file_${fileId}`);
         if (stored) {
           const { dataUrl, name } = JSON.parse(stored) as { dataUrl: string; name: string; id: string };
-          // Convert data URL back to File
           fetch(dataUrl)
             .then(r => r.blob())
             .then(blob => {
@@ -174,6 +199,34 @@ export function EditorLayout() {
             .catch(() => {/* ignore */});
         }
       } catch {/* sessionStorage unavailable */}
+    }
+
+    // Restore from Google OAuth redirect (file saved before leaving)
+    if (restore === "1") {
+      try {
+        const stored = sessionStorage.getItem("pdfcraft_restore");
+        if (stored) {
+          const { dataUrl, name } = JSON.parse(stored) as { dataUrl: string; name: string };
+          fetch(dataUrl)
+            .then(r => r.blob())
+            .then(blob => {
+              const file = new File([blob], name, { type: "application/pdf" });
+              loadFile(file);
+              sessionStorage.removeItem("pdfcraft_restore");
+              // Show paywall after file loads
+              if (postAuth === "download") {
+                setTimeout(() => setShowPaywall(true), 600);
+              } else if (postAuth === "save") {
+                setTimeout(() => saveDocument(), 600);
+              }
+            })
+            .catch(() => {/* ignore */});
+        }
+      } catch {/* ignore */}
+    } else if (postAuth) {
+      // Came back from Google OAuth without a file to restore (e.g. from dashboard link)
+      if (postAuth === "download") setTimeout(() => setShowPaywall(true), 400);
+      else if (postAuth === "save") setTimeout(() => saveDocument(), 400);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -642,7 +695,22 @@ export function EditorLayout() {
       </div>
 
       {/* ── Modals ── */}
-      <AuthModal    open={showAuth}    onClose={() => setShowAuth(false)}  onSuccess={onAuthSuccess} />
+      <AuthModal
+        open={showAuth}
+        onClose={() => setShowAuth(false)}
+        onSuccess={onAuthSuccess}
+        googleRedirectTo={
+          typeof window !== "undefined"
+            ? (() => {
+                const action = pendingAction ?? "download";
+                const base = window.location.pathname + window.location.search;
+                const sep  = base.includes("?") ? "&" : "?";
+                return `${base}${sep}restore=1&postAuth=${action}`;
+              })()
+            : "/dashboard"
+        }
+        onBeforeGoogleNavigate={persistFileForGoogleRedirect}
+      />
       <PaywallModal open={showPaywall} onClose={() => setShowPaywall(false)} toolName="Download PDF" userEmail={userEmail} userName={userName} />
       {showSignModal && <SignatureModal onConfirm={handleSignaturePlaced} onClose={() => setShowSignModal(false)} />}
     </div>

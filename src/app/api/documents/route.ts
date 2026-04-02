@@ -1,12 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionFromRequest } from "@/lib/session";
 
-// GET /api/documents — list user's documents
+// GET /api/documents — list user's documents, or ?id=xxx for a single doc with fileData
 export async function GET(req: NextRequest) {
   const session = await getSessionFromRequest(req);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { prisma } = await import("@/lib/prisma");
+  const id = new URL(req.url).searchParams.get("id");
+
+  if (id) {
+    const doc = await prisma.document.findFirst({ where: { id, userId: session.userId } });
+    if (!doc) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return NextResponse.json({ document: doc });
+  }
+
   const docs = await prisma.document.findMany({
     where:   { userId: session.userId },
     orderBy: { updatedAt: "desc" },

@@ -9,9 +9,13 @@ interface AuthModalProps {
   open: boolean;
   onClose: () => void;
   onSuccess: (email: string, name: string) => void;
+  /** Where Google OAuth should redirect after login (defaults to /dashboard) */
+  googleRedirectTo?: string;
+  /** Called just before navigating to Google OAuth (use to save state) */
+  onBeforeGoogleNavigate?: () => Promise<void>;
 }
 
-export function AuthModal({ open, onClose, onSuccess }: AuthModalProps) {
+export function AuthModal({ open, onClose, onSuccess, googleRedirectTo, onBeforeGoogleNavigate }: AuthModalProps) {
   const [tab,      setTab]      = useState<"login" | "register">("register");
   const [name,     setName]     = useState("");
   const [email,    setEmail]    = useState("");
@@ -69,7 +73,10 @@ export function AuthModal({ open, onClose, onSuccess }: AuthModalProps) {
 
         <div className="p-6 space-y-4">
           {/* Google */}
-          <GoogleButton redirectTo="/dashboard" />
+          <GoogleButton
+            redirectTo={googleRedirectTo ?? "/dashboard"}
+            onBeforeNavigate={onBeforeGoogleNavigate}
+          />
 
           <div className="flex items-center gap-3">
             <div className="h-px flex-1 bg-border" />

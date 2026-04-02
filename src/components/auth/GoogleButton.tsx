@@ -5,6 +5,8 @@ import { useState } from "react";
 interface GoogleButtonProps {
   redirectTo?: string;
   label?: string;
+  /** Called before navigation — use to persist state (e.g. save file to sessionStorage) */
+  onBeforeNavigate?: () => Promise<void>;
 }
 
 const GoogleSVG = () => (
@@ -16,11 +18,18 @@ const GoogleSVG = () => (
   </svg>
 );
 
-export function GoogleButton({ redirectTo = "/dashboard", label = "Continue with Google" }: GoogleButtonProps) {
+export function GoogleButton({
+  redirectTo = "/dashboard",
+  label = "Continue with Google",
+  onBeforeNavigate,
+}: GoogleButtonProps) {
   const [loading, setLoading] = useState(false);
 
-  const handleClick = () => {
+  const handleClick = async () => {
     setLoading(true);
+    try {
+      if (onBeforeNavigate) await onBeforeNavigate();
+    } catch { /* ignore */ }
     const params = new URLSearchParams({ redirect: redirectTo });
     window.location.href = `/api/auth/google?${params}`;
   };

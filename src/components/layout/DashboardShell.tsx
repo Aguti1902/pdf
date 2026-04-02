@@ -1,24 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
-  FilePlus, FolderOpen, Users, CreditCard,
+  FilePlus, FolderOpen, CreditCard,
   Mail, User, LogOut, FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const navItems = [
-  { href: "/dashboard/new",     icon: FilePlus,    label: "New document" },
-  { href: "/dashboard",         icon: FolderOpen,  label: "My documents", exact: true },
-  { href: "/dashboard/users",   icon: Users,       label: "Users" },
-  { href: "/dashboard/billing", icon: CreditCard,  label: "Billing" },
-];
-
-const bottomItems = [
-  { href: "/contact",           icon: Mail,        label: "Contact" },
-  { href: "/dashboard/profile", icon: User,        label: "My account" },
-];
+import { useLanguage } from "@/contexts/LanguageContext";
+import { useState } from "react";
 
 interface DashboardShellProps {
   children: React.ReactNode;
@@ -27,9 +17,34 @@ interface DashboardShellProps {
 
 export function DashboardShell({ children, user }: DashboardShellProps) {
   const pathname = usePathname();
+  const router   = useRouter();
+  const { t, messages } = useLanguage();
+  const d = messages ? t("dashboard") : null;
+  const nav = d?.nav as Record<string, string> | undefined;
+
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  const navItems = [
+    { href: "/dashboard/new",     icon: FilePlus,    label: nav?.newDocument  ?? "New document" },
+    { href: "/dashboard",         icon: FolderOpen,  label: nav?.myDocuments  ?? "My documents", exact: true },
+    { href: "/dashboard/billing", icon: CreditCard,  label: nav?.billing      ?? "Billing" },
+  ];
+
+  const bottomItems = [
+    { href: "/contact",           icon: Mail,  label: nav?.contact   ?? "Contact" },
+    { href: "/dashboard/profile", icon: User,  label: nav?.myAccount ?? "My account" },
+  ];
 
   const isActive = (href: string, exact?: boolean) =>
     exact ? pathname === href : pathname.startsWith(href);
+
+  const handleLogout = async () => {
+    setLoggingOut(true);
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch { /* ignore */ }
+    router.push("/");
+  };
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -86,9 +101,13 @@ export function DashboardShell({ children, user }: DashboardShellProps) {
             <p className="mt-3 truncate px-3 text-[11px] text-white/35">{user.email}</p>
           )}
 
-          <button className="mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] text-white/55 transition-colors hover:bg-white/5 hover:text-white/80">
+          <button
+            onClick={handleLogout}
+            disabled={loggingOut}
+            className="mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] text-white/55 transition-colors hover:bg-white/5 hover:text-white/80 disabled:opacity-40"
+          >
             <LogOut className="h-4 w-4 shrink-0 text-white/45" />
-            Log out
+            {loggingOut ? "..." : (nav?.logout ?? "Log out")}
           </button>
         </div>
       </aside>
