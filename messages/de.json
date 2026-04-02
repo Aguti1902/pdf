@@ -172,15 +172,30 @@
     "saving": "Speichern...",
     "tools": {
       "pointer": "Auswählen / Verschieben",
+      "pointerDesc": "Elemente auswählen und verschieben",
       "addText": "Text hinzufügen",
+      "addTextDesc": "Klicken, um ein Textfeld hinzuzufügen",
       "draw": "Zeichnen",
+      "drawDesc": "Freihandzeichnen",
       "highlight": "Markieren",
+      "highlightDesc": "Bereiche markieren",
       "shapes": "Rechteck",
+      "shapesDesc": "Ein Rechteck zeichnen",
       "eraser": "Radierer",
+      "eraserDesc": "Zeichnungen löschen",
       "sign": "Signieren",
+      "signDesc": "Signatur erstellen und platzieren",
       "addImage": "Bild hinzufügen",
+      "addImageDesc": "Klicken, um ein Bild einzufügen",
       "rotatePage": "Seite drehen",
-      "deletePage": "Seite löschen"
-    }
+      "rotatePageDesc": "Diese Seite um 90° drehen",
+      "deletePage": "Seite löschen",
+      "deletePageDesc": "Diese Seite entfernen"
+    },
+    "openToStart": "PDF zum Bearbeiten öffnen",
+    "clickOrDrop": "Hier klicken oder PDF hineinziehen",
+    "groupEdit": "Bearbeiten",
+    "groupInsert": "Einfügen",
+    "groupPages": "Seiten"
   }
 }

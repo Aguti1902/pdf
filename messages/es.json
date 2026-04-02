@@ -172,15 +172,30 @@
     "saving": "Guardando...",
     "tools": {
       "pointer": "Seleccionar / Mover",
+      "pointerDesc": "Seleccionar y mover elementos",
       "addText": "Añadir texto",
+      "addTextDesc": "Haz clic para añadir un cuadro de texto",
       "draw": "Dibujar",
+      "drawDesc": "Dibujo a mano alzada",
       "highlight": "Resaltar",
+      "highlightDesc": "Resaltar áreas",
       "shapes": "Rectángulo",
+      "shapesDesc": "Dibujar un rectángulo",
       "eraser": "Borrador",
+      "eraserDesc": "Borrar dibujos",
       "sign": "Firmar",
+      "signDesc": "Crear y colocar una firma",
       "addImage": "Añadir imagen",
+      "addImageDesc": "Haz clic para insertar una imagen",
       "rotatePage": "Rotar página",
-      "deletePage": "Eliminar página"
-    }
+      "rotatePageDesc": "Rotar esta página 90°",
+      "deletePage": "Eliminar página",
+      "deletePageDesc": "Eliminar esta página"
+    },
+    "openToStart": "Abre un PDF para empezar a editar",
+    "clickOrDrop": "Haz clic aquí o arrastra tu PDF",
+    "groupEdit": "Editar",
+    "groupInsert": "Insertar",
+    "groupPages": "Páginas"
   }
 }

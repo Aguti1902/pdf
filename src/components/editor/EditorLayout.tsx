@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
+import { useLanguage } from "@/contexts/LanguageContext";
 import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,40 +26,12 @@ import Link from "next/link";
 
 const PdfViewer = dynamic<PdfViewerProps>(() => import("./PdfViewer"), { ssr: false });
 
-// ─── Tool definitions (only functional ones) ─────────────────────────────────
-
-const TOOL_GROUPS: {
-  group: string;
-  items: { action: ToolAction; icon: React.ElementType; label: string; desc: string }[];
-}[] = [
-  {
-    group: "Edit",
-    items: [
-      { action: "pointer",   icon: MousePointer2, label: "Select / Move", desc: "Select and move elements" },
-      { action: "add-text",  icon: Type,          label: "Add Text",      desc: "Click to add a text box" },
-      { action: "draw",      icon: Pencil,        label: "Draw",          desc: "Freehand drawing" },
-      { action: "highlight", icon: Highlighter,   label: "Highlight",     desc: "Highlight areas" },
-      { action: "shapes",    icon: Shapes,        label: "Rectangle",     desc: "Draw a rectangle" },
-      { action: "eraser",    icon: Eraser,        label: "Eraser",        desc: "Erase drawings" },
-    ],
-  },
-  {
-    group: "Insert",
-    items: [
-      { action: "sign",      icon: PenLine,    label: "Sign",       desc: "Create and place a signature" },
-      { action: "add-image", icon: ImageIcon,  label: "Add Image",  desc: "Click to insert an image" },
-    ],
-  },
-  {
-    group: "Pages",
-    items: [
-      { action: "rotate",      icon: RotateCw, label: "Rotate Page",  desc: "Rotate this page 90°" },
-      { action: "delete-page", icon: Trash2,   label: "Delete Page",  desc: "Remove this page" },
-    ],
-  },
-];
-
-const ALL_TOOLS = TOOL_GROUPS.flatMap(g => g.items);
+// ─── Tool icons (static) ───────────────────────────────────────────────────────
+const TOOL_ICON_MAP: Record<ToolAction, React.ElementType> = {
+  pointer: MousePointer2, "add-text": Type, draw: Pencil, highlight: Highlighter,
+  shapes: Shapes, eraser: Eraser, sign: PenLine, "add-image": ImageIcon,
+  rotate: RotateCw, "delete-page": Trash2,
+};
 
 const CURSORS: Partial<Record<ToolAction, string>> = {
   "add-text": "text", sign: "crosshair", draw: "crosshair",
@@ -69,6 +43,42 @@ const CURSORS: Partial<Record<ToolAction, string>> = {
 
 export function EditorLayout() {
   const { editorState, setActiveTool, setZoom, setTotalPages, goToPrevPage, goToNextPage } = usePdfEditor();
+  const searchParams = useSearchParams();
+  const { t, messages } = useLanguage();
+  const editorT = messages ? t("editor") : null;
+
+  const TOOL_GROUPS = useMemo(() => {
+    const tr = editorT?.tools;
+    return [
+      {
+        group: editorT?.groupEdit ?? "Edit",
+        items: [
+          { action: "pointer"   as ToolAction, icon: TOOL_ICON_MAP.pointer,    label: tr?.pointer   ?? "Select / Move", desc: tr?.pointerDesc   ?? "Select and move elements" },
+          { action: "add-text"  as ToolAction, icon: TOOL_ICON_MAP["add-text"], label: tr?.addText   ?? "Add Text",      desc: tr?.addTextDesc   ?? "Click to add a text box" },
+          { action: "draw"      as ToolAction, icon: TOOL_ICON_MAP.draw,        label: tr?.draw      ?? "Draw",          desc: tr?.drawDesc      ?? "Freehand drawing" },
+          { action: "highlight" as ToolAction, icon: TOOL_ICON_MAP.highlight,   label: tr?.highlight ?? "Highlight",     desc: tr?.highlightDesc ?? "Highlight areas" },
+          { action: "shapes"    as ToolAction, icon: TOOL_ICON_MAP.shapes,      label: tr?.shapes    ?? "Rectangle",     desc: tr?.shapesDesc    ?? "Draw a rectangle" },
+          { action: "eraser"    as ToolAction, icon: TOOL_ICON_MAP.eraser,      label: tr?.eraser    ?? "Eraser",        desc: tr?.eraserDesc    ?? "Erase drawings" },
+        ],
+      },
+      {
+        group: editorT?.groupInsert ?? "Insert",
+        items: [
+          { action: "sign"      as ToolAction, icon: TOOL_ICON_MAP.sign,        label: tr?.sign      ?? "Sign",          desc: tr?.signDesc      ?? "Create and place a signature" },
+          { action: "add-image" as ToolAction, icon: TOOL_ICON_MAP["add-image"], label: tr?.addImage ?? "Add Image",     desc: tr?.addImageDesc  ?? "Click to insert an image" },
+        ],
+      },
+      {
+        group: editorT?.groupPages ?? "Pages",
+        items: [
+          { action: "rotate"      as ToolAction, icon: TOOL_ICON_MAP.rotate,        label: tr?.rotatePage ?? "Rotate Page",  desc: tr?.rotatePageDesc ?? "Rotate this page 90°" },
+          { action: "delete-page" as ToolAction, icon: TOOL_ICON_MAP["delete-page"], label: tr?.deletePage ?? "Delete Page",  desc: tr?.deletePageDesc ?? "Remove this page" },
+        ],
+      },
+    ];
+  }, [editorT]);
+
+  const ALL_TOOLS = useMemo(() => TOOL_GROUPS.flatMap(g => g.items), [TOOL_GROUPS]);
 
   // File
   const [pdfFile,      setPdfFile]      = useState<File | null>(null);
@@ -143,8 +153,30 @@ export function EditorLayout() {
     } catch { /* offline */ }
   }, []);
 
-  // Run on mount
-  useState(() => { checkSubscription(); fetchMe(); });
+  // Run on mount — also restore file from sessionStorage if fileId is in URL
+  useEffect(() => {
+    checkSubscription();
+    fetchMe();
+    const fileId = searchParams?.get("fileId");
+    if (fileId) {
+      try {
+        const stored = sessionStorage.getItem(`pdfcraft_file_${fileId}`);
+        if (stored) {
+          const { dataUrl, name } = JSON.parse(stored) as { dataUrl: string; name: string; id: string };
+          // Convert data URL back to File
+          fetch(dataUrl)
+            .then(r => r.blob())
+            .then(blob => {
+              const file = new File([blob], name, { type: "application/pdf" });
+              loadFile(file);
+              sessionStorage.removeItem(`pdfcraft_file_${fileId}`);
+            })
+            .catch(() => {/* ignore */});
+        }
+      } catch {/* sessionStorage unavailable */}
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ── History ──────────────────────────────────────────────────────────────────
   const commit = useCallback((next: Annotation[], selectId?: string) => {
@@ -432,14 +464,14 @@ export function EditorLayout() {
         {activeItem && <Badge className="hidden text-xs md:flex">{activeItem.label}</Badge>}
         <Button variant="outline" size="sm" className="h-8 gap-1.5" onClick={() => fileInputRef.current?.click()}>
           <Upload className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">Open PDF</span>
+          <span className="hidden sm:inline">{editorT?.openPdf ?? "Open PDF"}</span>
         </Button>
         <Button variant="outline" size="sm" className="h-8 gap-1.5" onClick={saveDocument} disabled={isSaving || !pdfUrl}>
           <Save className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">{isSaving ? "Saving..." : "Save"}</span>
+          <span className="hidden sm:inline">{isSaving ? (editorT?.saving ?? "Saving...") : (editorT?.save ?? "Save")}</span>
         </Button>
         <Button size="sm" className="h-8 gap-1.5 font-semibold" onClick={startDownload} disabled={!pdfUrl}>
-          <Download className="h-3.5 w-3.5" /> Download
+          <Download className="h-3.5 w-3.5" /> {editorT?.download ?? "Download"}
         </Button>
         <input ref={fileInputRef} type="file" accept=".pdf,application/pdf" className="hidden"
           onChange={e => { const f = e.target.files?.[0]; if (f) loadFile(f); e.target.value = ""; }} />
@@ -477,8 +509,8 @@ export function EditorLayout() {
                     </button>
                   </TooltipTrigger>
                   <TooltipContent side="right" className="text-xs">
-                    <p className="font-medium">{item.label}</p>
-                    <p className="text-muted-foreground">{item.desc}</p>
+                    <p className="font-medium text-primary-foreground">{item.label}</p>
+                    <p className="text-primary-foreground/70">{item.desc}</p>
                   </TooltipContent>
                 </Tooltip>
               ))}
@@ -563,8 +595,8 @@ export function EditorLayout() {
                     <Upload className="h-8 w-8 text-primary" />
                   </div>
                   <div>
-                    <p className="text-base font-semibold">Open a PDF to start editing</p>
-                    <p className="mt-1 text-sm text-muted-foreground">Click here or drag & drop your PDF</p>
+                    <p className="text-base font-semibold">{editorT?.openToStart ?? "Open a PDF to start editing"}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">{editorT?.clickOrDrop ?? "Click here or drag & drop your PDF"}</p>
                   </div>
                   <Badge variant="secondary" className="text-xs">PDF up to 100MB</Badge>
                 </button>
@@ -686,7 +718,7 @@ function ToolOptions({ tool, color, size, selectedId, onColorChange, onSizeChang
 
       {tool === "add-text" && (
         <div className="rounded-lg border bg-muted/40 p-2.5 text-muted-foreground leading-relaxed">
-          Click on the document where you want to add text. Press <kbd className="rounded bg-muted px-1">Esc</kbd> to confirm.
+          Click on the document where you want to add text. Press <span className="inline-flex items-center rounded border border-border bg-background px-1.5 py-0.5 font-mono text-[10px] font-medium shadow-sm">Esc</span> to confirm.
         </div>
       )}
 

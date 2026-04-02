@@ -48,8 +48,10 @@ export function useUpload() {
         xhr.send(formData);
       });
 
+      // Attach the raw File object so callers can persist it (e.g. sessionStorage)
+      const resultWithRaw = Object.assign(result, { _rawFile: file });
       setState({ status: "ready", file: result });
-      return result;
+      return resultWithRaw;
     } catch (err) {
       const message = err instanceof Error ? err.message : "Upload failed.";
       setState({ status: "error", message });

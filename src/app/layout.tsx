@@ -5,6 +5,9 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { DEFAULT_METADATA } from "@/config/seo";
 import { LanguageProvider } from "@/contexts/LanguageContext";
+import { cookies } from "next/headers";
+import type { Locale } from "@/lib/i18n";
+import { locales, defaultLocale } from "@/lib/i18n";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -18,15 +21,20 @@ export const metadata: Metadata = {
   description: DEFAULT_METADATA.description,
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Read locale from cookie server-side to avoid flash of wrong language
+  const cookieStore = await cookies();
+  const rawLocale = cookieStore.get("pdfcraft_locale")?.value as Locale | undefined;
+  const initialLocale: Locale = rawLocale && locales.includes(rawLocale) ? rawLocale : defaultLocale;
+
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang={initialLocale} suppressHydrationWarning>
       <body className={`${inter.variable} font-sans antialiased`}>
-        <LanguageProvider>
+        <LanguageProvider initialLocale={initialLocale}>
           <TooltipProvider>
             {children}
             <Toaster position="bottom-right" richColors />

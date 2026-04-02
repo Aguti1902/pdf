@@ -11,9 +11,18 @@ import { ChevronDown, Globe } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { locales, localeLabels, localeFlags, type Locale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { usePathname, useRouter } from "next/navigation";
 
 export function LanguageSwitcher({ compact = false }: { compact?: boolean }) {
-  const { locale, setLocale } = useLanguage();
+  const { locale } = useLanguage();
+  const pathname = usePathname();
+  const router = useRouter();
+
+  const handleSelect = (newLocale: Locale) => {
+    // Navigate to /{locale}{currentPath} — middleware will rewrite + set cookie
+    const target = newLocale === "en" ? pathname : `/${newLocale}${pathname}`;
+    router.push(target);
+  };
 
   return (
     <DropdownMenu>
@@ -35,7 +44,7 @@ export function LanguageSwitcher({ compact = false }: { compact?: boolean }) {
         {locales.map((l: Locale) => (
           <DropdownMenuItem
             key={l}
-            onClick={() => setLocale(l)}
+            onClick={() => handleSelect(l)}
             className={cn(
               "flex items-center gap-2 cursor-pointer",
               l === locale && "bg-accent font-medium"

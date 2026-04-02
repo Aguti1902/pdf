@@ -18,9 +18,25 @@ export function Hero() {
   const hero = messages ? t("hero") : null;
   const nav = messages ? t("nav") : null;
 
-  const handleUpload = (file: UploadedFile) => {
+  const handleUpload = (file: UploadedFile & { _rawFile?: File }) => {
     setUploadedFile(file);
-    router.push("/editor?fileId=" + file.id);
+    // Store the raw file in sessionStorage so the editor can load it directly
+    if (file._rawFile) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const dataUrl = e.target?.result as string;
+        try {
+          sessionStorage.setItem(
+            `pdfcraft_file_${file.id}`,
+            JSON.stringify({ dataUrl, name: file._rawFile!.name, id: file.id })
+          );
+        } catch {/* sessionStorage full */ }
+        router.push("/editor?fileId=" + file.id);
+      };
+      reader.readAsDataURL(file._rawFile);
+    } else {
+      router.push("/editor?fileId=" + file.id);
+    }
   };
 
   return (

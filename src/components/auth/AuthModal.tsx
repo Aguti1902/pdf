@@ -66,7 +66,7 @@ export function AuthModal({ open, onClose, onSuccess }: AuthModalProps) {
             {tab === "register" ? "Create your account" : "Welcome back"}
           </h2>
           <p className="mt-0.5 text-sm text-muted-foreground">
-            {tab === "register" ? "Start your 7-day trial for just 0,50 €" : "Sign in to continue"}
+            {tab === "register" ? "Sign up to save and download your document" : "Sign in to continue"}
           </p>
         </div>
 
@@ -128,14 +128,11 @@ export function AuthModal({ open, onClose, onSuccess }: AuthModalProps) {
             </Button>
           </form>
 
-          {tab === "register" && (
-            <p className="text-center text-[11px] text-muted-foreground leading-relaxed">
-              By creating an account you agree to our{" "}
-              <a href="/legal/terms" className="underline hover:text-foreground">Terms</a>{" "}and{" "}
-              <a href="/legal/privacy" className="underline hover:text-foreground">Privacy Policy</a>.
-              After the 7-day trial (0,50 €), your subscription renews at 49,90 €/month.
-            </p>
-          )}
+          <p className="text-center text-[11px] text-muted-foreground leading-relaxed">
+            By continuing you agree to our{" "}
+            <a href="/legal/terms" className="underline hover:text-foreground">Terms of Service</a>{" "}and{" "}
+            <a href="/legal/privacy" className="underline hover:text-foreground">Privacy Policy</a>.
+          </p>
         </div>
       </div>
     </div>

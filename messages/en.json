@@ -170,17 +170,32 @@
     "save": "Save",
     "download": "Download",
     "saving": "Saving...",
+    "openToStart": "Open a PDF to start editing",
+    "clickOrDrop": "Click here or drag & drop your PDF",
+    "groupEdit": "Edit",
+    "groupInsert": "Insert",
+    "groupPages": "Pages",
     "tools": {
       "pointer": "Select / Move",
+      "pointerDesc": "Select and move elements",
       "addText": "Add Text",
+      "addTextDesc": "Click to add a text box",
       "draw": "Draw",
+      "drawDesc": "Freehand drawing",
       "highlight": "Highlight",
+      "highlightDesc": "Highlight areas",
       "shapes": "Rectangle",
+      "shapesDesc": "Draw a rectangle",
       "eraser": "Eraser",
+      "eraserDesc": "Erase drawings",
       "sign": "Sign",
+      "signDesc": "Create and place a signature",
       "addImage": "Add Image",
+      "addImageDesc": "Click to insert an image",
       "rotatePage": "Rotate Page",
-      "deletePage": "Delete Page"
+      "rotatePageDesc": "Rotate this page 90°",
+      "deletePage": "Delete Page",
+      "deletePageDesc": "Remove this page"
     }
   }
 }

@@ -5,7 +5,6 @@ import {
   type Locale,
   type Messages,
   defaultLocale,
-  getCookieLocale,
   setCookieLocale,
   getMessages,
 } from "@/lib/i18n";
@@ -14,9 +13,7 @@ interface LanguageContextValue {
   locale: Locale;
   messages: Messages | null;
   setLocale: (locale: Locale) => void;
-  t: <TSection extends keyof Messages>(
-    section: TSection
-  ) => Messages[TSection];
+  t: <TSection extends keyof Messages>(section: TSection) => Messages[TSection];
 }
 
 const LanguageContext = createContext<LanguageContextValue>({
@@ -26,15 +23,20 @@ const LanguageContext = createContext<LanguageContextValue>({
   t: () => ({}) as never,
 });
 
-export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>(defaultLocale);
+export function LanguageProvider({
+  children,
+  initialLocale = defaultLocale,
+}: {
+  children: React.ReactNode;
+  initialLocale?: Locale;
+}) {
+  const [locale, setLocaleState] = useState<Locale>(initialLocale);
   const [messages, setMessages] = useState<Messages | null>(null);
 
+  // Load messages for the initial locale immediately
   useEffect(() => {
-    const detected = getCookieLocale();
-    setLocaleState(detected);
-    getMessages(detected).then(setMessages);
-  }, []);
+    getMessages(initialLocale).then(setMessages);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const setLocale = useCallback((newLocale: Locale) => {
     setCookieLocale(newLocale);
