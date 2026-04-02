@@ -60,7 +60,7 @@ export async function createCheckoutSession({
     ? [{
         price_data: {
           currency:     currencyPricing.currency.toLowerCase(),
-          product_data: { name: `PDFCraft — ${trialDays ?? 7}-Day Trial` },
+          product_data: { name: `PDFCraft — ${trialDays ?? 2}-Day Trial` },
           unit_amount:  Math.round(currencyPricing.trialAmount * 100),
         },
         quantity: 1,

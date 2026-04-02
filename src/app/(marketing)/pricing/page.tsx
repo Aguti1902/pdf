@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { CheckCircle2, ChevronDown, ChevronUp, Lock } from "lucide-react";
 import Link from "next/link";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -37,12 +37,21 @@ function FaqItem({ question, answer }: { question: string; answer: string }) {
 
 const checkFeats = ["feat1", "feat2", "feat3", "feat4", "feat5", "feat6"] as const;
 
+const LOCALE_CURRENCY: Record<string, CurrencyCode> = {
+  en: "USD", es: "EUR", fr: "EUR", de: "EUR", it: "EUR", uk: "EUR", ru: "EUR",
+};
+
 export default function PricingPage() {
-  const { t, messages } = useLanguage();
+  const { t, messages, locale } = useLanguage();
   const p = messages ? t("pricingPage") : null;
   const [currency, setCurrency] = useState<CurrencyCode>(DEFAULT_CURRENCY);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const curr = CURRENCIES[currency];
+
+  // Set default currency based on locale
+  useEffect(() => {
+    setCurrency(LOCALE_CURRENCY[locale] ?? DEFAULT_CURRENCY);
+  }, [locale]);
 
   const handleCheckout = async () => {
     setCheckoutLoading(true);

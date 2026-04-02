@@ -26,7 +26,7 @@ export const PRICING = {
     price:    CURRENCIES.EUR.trialAmount,
     currency: "EUR",
     label:    CURRENCIES.EUR.trialLabel,
-    days:     7,
+    days:     2,
     stripePriceId: process.env.NEXT_PUBLIC_STRIPE_TRIAL_FEE_PRICE_ID
       ?? "price_1THbL5JB5YYhafsNwzOUQWfl",
   },
@@ -57,6 +57,6 @@ export const FEATURES = {
 };
 
 export const TRIAL_DISCLOSURE = {
-  summary: `Start your 7-day full access trial for just 0,50 €. After the trial period, your subscription automatically renews at 49,90 €/month until cancelled. Cancel anytime from your account before the trial ends to avoid charges.`,
-  checkoutNotice: `By completing this purchase, you agree to the 7-day trial at 0,50 €, after which your subscription will automatically renews at 49,90 €/month until cancelled.`,
+  summary: `Start your 2-day full access trial for just 0,50 €. After the trial period, your subscription automatically renews at 49,90 €/month until cancelled. Cancel anytime from your account before the trial ends to avoid charges.`,
+  checkoutNotice: `By completing this purchase, you agree to the 2-day trial at 0,50 €, after which your subscription will automatically renews at 49,90 €/month until cancelled.`,
 };

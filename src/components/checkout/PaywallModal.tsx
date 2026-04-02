@@ -1,9 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Lock, Loader2 } from "lucide-react";
+import { Loader2, Lock, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { PRICING, CURRENCIES, DEFAULT_CURRENCY, type CurrencyCode } from "@/config/pricing";
 import { CurrencySelector } from "./CurrencySelector";
@@ -18,15 +17,34 @@ interface PaywallModalProps {
   userName?: string;
 }
 
+/** Map locale codes to a preferred default currency */
+const LOCALE_CURRENCY: Record<string, CurrencyCode> = {
+  en: "USD",
+  es: "EUR",
+  fr: "EUR",
+  de: "EUR",
+  it: "EUR",
+  uk: "EUR",
+  ru: "EUR",
+};
+
 export function PaywallModal({ open, onClose, toolName: _toolName, userEmail, userName }: PaywallModalProps) {
-  const [loading, setLoading] = useState(false);
-  const [currency, setCurrency] = useState<CurrencyCode>(DEFAULT_CURRENCY);
-  const { t, messages } = useLanguage();
-  const p = messages ? t("pricingPage") : null;
+  const { locale } = useLanguage();
+  const defaultCurrency: CurrencyCode = LOCALE_CURRENCY[locale] ?? DEFAULT_CURRENCY;
+
+  const [loading, setLoading]   = useState(false);
+  const [currency, setCurrency] = useState<CurrencyCode>(defaultCurrency);
+  const didAutoLaunch = useRef(false);
+
+  // Sync currency when locale changes
+  useEffect(() => {
+    setCurrency(LOCALE_CURRENCY[locale] ?? DEFAULT_CURRENCY);
+  }, [locale]);
 
   const curr = CURRENCIES[currency];
 
-  const handleCheckout = async () => {
+  const handleCheckout = async (selectedCurrency = currency) => {
+    if (loading) return;
     setLoading(true);
     try {
       const res = await fetch("/api/stripe/create-checkout", {
@@ -36,7 +54,7 @@ export function PaywallModal({ open, onClose, toolName: _toolName, userEmail, us
           priceId:   PRICING.monthly.stripePriceId,
           userEmail,
           userName,
-          currency,
+          currency:  selectedCurrency,
         }),
       });
 
@@ -55,93 +73,77 @@ export function PaywallModal({ open, onClose, toolName: _toolName, userEmail, us
     }
   };
 
+  // Auto-launch checkout the first time the modal opens
+  useEffect(() => {
+    if (open && !didAutoLaunch.current) {
+      didAutoLaunch.current = true;
+      // Small delay so the modal renders before we navigate
+      const t = setTimeout(() => handleCheckout(LOCALE_CURRENCY[locale] ?? DEFAULT_CURRENCY), 400);
+      return () => clearTimeout(t);
+    }
+    if (!open) {
+      didAutoLaunch.current = false;
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-sm gap-0 overflow-hidden rounded-2xl border border-border p-0 shadow-lg">
+      <DialogContent className="max-w-xs gap-0 overflow-hidden rounded-2xl border border-border p-0 shadow-xl">
 
-        {/* Currency selector row */}
+        {/* Currency selector */}
         <div className="flex justify-center border-b border-border px-6 py-3">
           <CurrencySelector value={currency} onChange={setCurrency} />
         </div>
 
-        {/* Today / Then columns */}
+        {/* Price columns */}
         <div className="grid grid-cols-2 divide-x divide-border">
-          <div className="flex flex-col items-center px-6 py-8">
-            <p className="mb-2 text-sm font-semibold text-muted-foreground">
-              {p?.today ?? "Today"}
-            </p>
-            <p className="text-4xl font-extrabold tracking-tight text-foreground">
-              {curr.trialLabel}
-            </p>
-            <p className="mt-1.5 text-xs text-muted-foreground">
-              {p?.trialLabel ?? `${PRICING.trial.days}-day trial`}
-            </p>
+          <div className="flex flex-col items-center px-5 py-7">
+            <p className="mb-1.5 text-sm font-semibold text-muted-foreground">Hoy</p>
+            <p className="text-4xl font-extrabold tracking-tight text-foreground">{curr.trialLabel}</p>
+            <p className="mt-1.5 text-xs text-muted-foreground">Prueba de {PRICING.trial.days} días</p>
           </div>
-          <div className="flex flex-col items-center px-6 py-8">
-            <p className="mb-2 text-sm font-semibold text-muted-foreground">
-              {p?.then ?? "Then"}
-            </p>
-            <p className="text-4xl font-extrabold tracking-tight text-foreground">
-              {curr.monthlyLabel}
-            </p>
-            <p className="mt-1.5 text-xs text-muted-foreground">
-              {p?.monthLabel ?? "Month"}
-            </p>
+          <div className="flex flex-col items-center px-5 py-7">
+            <p className="mb-1.5 text-sm font-semibold text-muted-foreground">Luego</p>
+            <p className="text-4xl font-extrabold tracking-tight text-foreground">{curr.monthlyLabel}</p>
+            <p className="mt-1.5 text-xs text-muted-foreground">/ mes</p>
           </div>
         </div>
 
-        {/* Disclosure */}
-        <div className="border-t border-border px-6 py-5">
-          <p className="text-center text-sm leading-relaxed text-muted-foreground">
-            {p?.disclosure
-              ? p.disclosure
-              : `By activating your ${PRICING.trial.days}-day trial for ${curr.trialLabel}, you are starting a `}
-            {!p && (
-              <>
-                <strong className="font-semibold text-foreground">recurring monthly subscription</strong>.{" "}
-                Once the trial period ends, you will be automatically charged {curr.monthlyLabel} each month.
-              </>
-            )}
-          </p>
-          {p?.disclosure2 && (
-            <p className="mt-3 text-center text-sm leading-relaxed text-muted-foreground">
-              {p.disclosure2}
-            </p>
-          )}
-        </div>
-
-        {/* CTA */}
-        <div className="border-t border-border px-6 pb-6 pt-5 text-center">
-          <Button
-            size="lg"
-            className="w-full rounded-xl bg-foreground text-base font-bold text-background hover:opacity-90"
-            onClick={handleCheckout}
+        {/* CTA — loading state while auto-redirecting */}
+        <div className="border-t border-border px-5 pb-5 pt-4">
+          <button
+            onClick={() => handleCheckout()}
             disabled={loading}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-foreground px-4 py-3.5 text-base font-bold text-background transition hover:opacity-90 disabled:opacity-60"
           >
             {loading ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {p?.redirecting ?? "Redirecting…"}
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Redirigiendo al pago…
               </>
             ) : (
               <>
-                <Lock className="mr-2 h-4 w-4" />
-                {p?.startBtn ?? `Start ${PRICING.trial.days}-day trial`}
+                <Lock className="h-4 w-4" />
+                Iniciar prueba de {PRICING.trial.days} días
               </>
             )}
-          </Button>
-          <p className="mt-3 text-xs text-muted-foreground">
-            <button onClick={onClose} className="underline underline-offset-2 hover:text-foreground cursor-pointer">
-              {p?.cancelAnytime ?? "Cancel anytime"}
-            </button>
-          </p>
+          </button>
+
+          <div className="mt-3 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
+            <ShieldCheck className="h-3.5 w-3.5 text-green-500" />
+            Pago seguro · Cancela cuando quieras
+          </div>
         </div>
 
-        {/* Legal footer */}
-        <div className="border-t border-border bg-muted/30 px-6 py-3 text-center text-[11px] text-muted-foreground">
-          <Link href="/legal/subscription" className="underline underline-offset-2 hover:text-foreground">
-            {p?.subscriptionTerms ?? "Subscription terms"}
-          </Link>
+        {/* Subscription fine print — minimal and discreet */}
+        <div className="border-t border-border bg-muted/20 px-5 py-2.5 text-center">
+          <p className="text-[10px] leading-relaxed text-muted-foreground/70">
+            Al continuar inicias una suscripción mensual recurrente de {curr.monthlyLabel}/mes tras el período de prueba.{" "}
+            <Link href="/legal/subscription" className="underline underline-offset-2 hover:text-foreground/70">
+              Ver términos
+            </Link>
+          </p>
         </div>
       </DialogContent>
     </Dialog>
