@@ -7,14 +7,14 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type DrawAnnotation  = { id: string; type: "draw";   points: { x: number; y: number }[]; color: string; size: number; rotation?: number };
-export type RectAnnotation  = { id: string; type: "highlight" | "shape"; x: number; y: number; w: number; h: number; color: string; size: number; rotation?: number };
-export type ImageAnnotation = { id: string; type: "image";  x: number; y: number; w: number; h: number; src: string; rotation?: number };
+export type DrawAnnotation  = { id: string; type: "draw";   points: { x: number; y: number }[]; color: string; size: number; rotation?: number; page?: number };
+export type RectAnnotation  = { id: string; type: "highlight" | "shape"; x: number; y: number; w: number; h: number; color: string; size: number; rotation?: number; page?: number };
+export type ImageAnnotation = { id: string; type: "image";  x: number; y: number; w: number; h: number; src: string; rotation?: number; page?: number };
 export type Annotation      = DrawAnnotation | RectAnnotation | ImageAnnotation;
 
 export interface LiveRect { x: number; y: number; w: number; h: number; color: string; type: "highlight" | "shape"; size: number; }
 
-export interface TextBox { id: string; x: number; y: number; value: string; color: string; placeholder?: string; rotation?: number; }
+export interface TextBox { id: string; x: number; y: number; value: string; color: string; placeholder?: string; rotation?: number; page?: number; }
 
 export interface PdfViewerProps {
   url: string;

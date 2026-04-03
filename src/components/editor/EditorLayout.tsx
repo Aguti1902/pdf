@@ -12,7 +12,7 @@ import {
   Download, ZoomIn, ZoomOut, ChevronLeft, ChevronRight,
   Undo2, Redo2, Save, FileText, Type, PenLine, Pencil,
   Highlighter, Image as ImageIcon, Trash2, ArrowLeft,
-  RotateCw, Eraser, MousePointer2, Shapes, Upload, Share2,
+  RotateCw, Eraser, MousePointer2, Shapes, Upload, Share2, Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePdfEditor } from "@/hooks/usePdfEditor";
@@ -242,11 +242,14 @@ export function EditorLayout() {
 
   // ── History ──────────────────────────────────────────────────────────────────
   const commit = useCallback((next: Annotation[], selectId?: string) => {
-    setAnnotations(next);
-    setHistory(h => [...h.slice(0, historyIdx + 1), next]);
+    // Stamp annotations that don't yet have a page with the current page number
+    const currentPage = editorState.currentPage;
+    const stamped = next.map(ann => ann.page !== undefined ? ann : { ...ann, page: currentPage });
+    setAnnotations(stamped);
+    setHistory(h => [...h.slice(0, historyIdx + 1), stamped]);
     setHistoryIdx(i => i + 1);
     if (selectId !== undefined) { setSelectedId(selectId); setActiveTool("pointer"); }
-  }, [historyIdx, setActiveTool]);
+  }, [historyIdx, setActiveTool, editorState.currentPage]);
 
   const undo = () => {
     if (historyIdx === 0) return;
@@ -297,7 +300,8 @@ export function EditorLayout() {
     }
     if (tool === "add-text") {
       const id = crypto.randomUUID();
-      setTextBoxes(prev => [...prev, { id, x, y, value: "", color: toolColor, placeholder: "Type here..." }]);
+      const currentPage = editorState.currentPage;
+      setTextBoxes(prev => [...prev, { id, x, y, value: "", color: toolColor, placeholder: "Type here...", page: currentPage }]);
       setActiveTool("pointer");
     }
     if (tool === "add-image") { pendingImagePos.current = { x, y }; imageInputRef.current?.click(); }
@@ -476,15 +480,33 @@ export function EditorLayout() {
   }, [pdfFile, pdfUrl, userEmail, fileName, docId, annotations, editorState.totalPages]);
 
   // ── Download / Share flow: Auth → Paywall ─────────────────────────────────────
+  const [isExporting, setIsExporting] = useState(false);
+
+  const doExportDownload = useCallback(async () => {
+    if (!pdfFile) return;
+    setIsExporting(true);
+    try {
+      const { exportEditorPdf } = await import("@/lib/pdf-processing/exportEditorPdf");
+      const blob = await exportEditorPdf({ pdfFile, annotations, textBoxes, pageRotation, deletedPages });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = fileName; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    } catch (err) {
+      console.error("[export]", err);
+      // Fallback: download original without annotations
+      const a = document.createElement("a");
+      a.href = pdfUrl!; a.download = fileName; a.click();
+    } finally {
+      setIsExporting(false);
+    }
+  }, [pdfFile, pdfUrl, annotations, textBoxes, pageRotation, deletedPages, fileName]);
+
   const startDownload = () => {
     if (!pdfUrl) return;
     if (!userEmail) { setPendingAction("download"); setShowAuth(true); return; }
     if (!isPremium) { setPendingAction("download"); setShowPaywall(true); return; }
-    // Actual download
-    const a = document.createElement("a");
-    a.href = pdfUrl;
-    a.download = fileName;
-    a.click();
+    doExportDownload();
   };
 
   const onAuthSuccess = async (email: string, name: string) => {
@@ -531,8 +553,10 @@ export function EditorLayout() {
           <Save className="h-3.5 w-3.5" />
           <span className="hidden sm:inline">{isSaving ? (editorT?.saving ?? "Saving...") : (editorT?.save ?? "Save")}</span>
         </Button>
-        <Button size="sm" className="h-8 gap-1.5 font-semibold" onClick={startDownload} disabled={!pdfUrl}>
-          <Download className="h-3.5 w-3.5" /> {editorT?.download ?? "Download"}
+        <Button size="sm" className="h-8 gap-1.5 font-semibold" onClick={startDownload} disabled={!pdfUrl || isExporting}>
+          {isExporting
+            ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> {editorT?.saving ?? "Exporting…"}</>
+            : <><Download className="h-3.5 w-3.5" /> {editorT?.download ?? "Download"}</>}
         </Button>
         <input ref={fileInputRef} type="file" accept=".pdf,application/pdf" className="hidden"
           onChange={e => { const f = e.target.files?.[0]; if (f) loadFile(f); e.target.value = ""; }} />
@@ -631,8 +655,8 @@ export function EditorLayout() {
                   page={editorState.currentPage}
                   zoom={editorState.zoom}
                   pageRotation={pageRotation}
-                  annotations={annotations}
-                  textBoxes={textBoxes}
+                  annotations={annotations.filter(a => (a.page ?? editorState.currentPage) === editorState.currentPage)}
+                  textBoxes={textBoxes.filter(tb => (tb.page ?? editorState.currentPage) === editorState.currentPage)}
                   selectedId={selectedId}
                   cursor={cursor}
                   liveStroke={liveStroke}
@@ -719,7 +743,14 @@ export function EditorLayout() {
         }
         onBeforeGoogleNavigate={persistFileForGoogleRedirect}
       />
-      <PaywallModal open={showPaywall} onClose={() => setShowPaywall(false)} toolName="Download PDF" userEmail={userEmail} userName={userName} />
+      <PaywallModal
+        open={showPaywall}
+        onClose={() => setShowPaywall(false)}
+        toolName="Download PDF"
+        userEmail={userEmail}
+        userName={userName}
+        onPaymentSuccess={() => { setShowPaywall(false); doExportDownload(); }}
+      />
       {showSignModal && <SignatureModal onConfirm={handleSignaturePlaced} onClose={() => setShowSignModal(false)} />}
     </div>
   );

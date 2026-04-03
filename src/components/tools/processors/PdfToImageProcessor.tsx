@@ -5,7 +5,7 @@ import { useDropzone } from "react-dropzone";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DownloadGateModals } from "@/components/checkout/DownloadGateModals";
-import { pdfToImages, type PageImage } from "@/lib/pdf-processing/pdfToImage";
+import { pdfToImages, type PageImage, type ImageQuality } from "@/lib/pdf-processing/pdfToImage";
 import { useDownloadGate } from "@/hooks/useDownloadGate";
 import { Upload, Loader2, Download, CheckCircle2, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -13,11 +13,19 @@ import JSZip from "jszip";
 
 type Format = "jpeg" | "png";
 
+const QUALITY_LABELS: Record<ImageQuality, string> = {
+  low:   "Baja  (~150 DPI)",
+  medium: "Media (~250 DPI)",
+  high:   "Alta  (~350 DPI)",
+  ultra:  "Ultra (~500 DPI)",
+};
+
 export function PdfToImageProcessor({ format }: { format: Format }) {
   const [file, setFile] = useState<File | null>(null);
   const [pages, setPages] = useState<PageImage[]>([]);
   const [processing, setProcessing] = useState(false);
   const [previews, setPreviews] = useState<string[]>([]);
+  const [quality, setQuality] = useState<ImageQuality>("high");
   const gate = useDownloadGate();
 
   const onDrop = useCallback((accepted: File[]) => {
@@ -33,7 +41,7 @@ export function PdfToImageProcessor({ format }: { format: Format }) {
     if (!file) return;
     setProcessing(true);
     try {
-      const result = await pdfToImages(file, format, 2);
+      const result = await pdfToImages(file, format, quality);
       setPages(result);
       // Build preview URLs for first 6 pages
       const urls = await Promise.all(
@@ -120,7 +128,19 @@ export function PdfToImageProcessor({ format }: { format: Format }) {
             <Badge variant="secondary">{(file.size/1024/1024).toFixed(1)} MB</Badge>
             <button onClick={() => setFile(null)} className="text-xs text-muted-foreground hover:text-destructive">Change</button>
           </div>
-          <p className="text-xs text-muted-foreground">Each page will be converted to a high-quality {format.toUpperCase()} image (2× scale). Multiple pages are packaged in a ZIP file.</p>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">Calidad de imagen</label>
+            <select
+              value={quality}
+              onChange={e => setQuality(e.target.value as ImageQuality)}
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+            >
+              {(Object.keys(QUALITY_LABELS) as ImageQuality[]).map(q => (
+                <option key={q} value={q}>{QUALITY_LABELS[q]}</option>
+              ))}
+            </select>
+          </div>
+          <p className="text-xs text-muted-foreground">Cada página se convierte a una imagen {format.toUpperCase()}. Varias páginas se empaquetan en un ZIP.</p>
           <Button size="lg" className="w-full gap-2" onClick={handleConvert} disabled={processing}>
             {processing ? <><Loader2 className="h-4 w-4 animate-spin" />Converting…</> : <>Convert to {format.toUpperCase()}</>}
           </Button>

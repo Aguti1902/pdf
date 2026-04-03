@@ -56,6 +56,7 @@ export function DownloadGateModals({ gate, toolName }: Props) {
         userEmail={userEmail}
         userName={userName}
         onPaymentSuccess={handlePaymentSuccess}
+        noRedirect
       />
     </>
   );

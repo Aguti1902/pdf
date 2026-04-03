@@ -15,11 +15,24 @@ async function getPdfjsLib() {
   return lib;
 }
 
+export type ImageQuality = "low" | "medium" | "high" | "ultra";
+
+const QUALITY_SCALE: Record<ImageQuality, number> = {
+  low:   1.5,
+  medium: 2.5,
+  high:   3.5,
+  ultra:  5,
+};
+
+const QUALITY_JPEG: Record<ImageQuality, number> = {
+  low: 0.80, medium: 0.90, high: 0.95, ultra: 0.98,
+};
+
 /** Convert all pages of a PDF to images. Format: "jpeg" | "png" */
 export async function pdfToImages(
   file: File,
   format: "jpeg" | "png" = "jpeg",
-  scale = 2
+  scale: number | ImageQuality = "high"
 ): Promise<PageImage[]> {
   const pdfjsLib = await getPdfjsLib();
   const bytes = await file.arrayBuffer();
@@ -28,9 +41,12 @@ export async function pdfToImages(
   const mimeType = format === "jpeg" ? "image/jpeg" : "image/png";
   const ext = format === "jpeg" ? "jpg" : "png";
 
+  const resolvedScale = typeof scale === "string" ? QUALITY_SCALE[scale] : scale;
+  const jpegQuality   = typeof scale === "string" ? QUALITY_JPEG[scale]  : 0.95;
+
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i);
-    const viewport = page.getViewport({ scale });
+    const viewport = page.getViewport({ scale: resolvedScale });
 
     const canvas = document.createElement("canvas");
     canvas.width = viewport.width;
@@ -44,7 +60,7 @@ export async function pdfToImages(
       canvas.toBlob(
         b => b ? resolve(b) : reject(new Error("Canvas toBlob failed")),
         mimeType,
-        0.92
+        format === "jpeg" ? jpegQuality : undefined
       );
     });
 

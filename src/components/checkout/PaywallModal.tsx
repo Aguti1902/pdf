@@ -334,16 +334,21 @@ function CheckoutForm({ clientSecret, customerId, currency, userEmail, onSuccess
 /* ══════════════════════════════════════════════════════════════════════
    Success screen
 ══════════════════════════════════════════════════════════════════════ */
-function SuccessScreen() {
+function SuccessScreen({ noRedirect, onClose }: { noRedirect?: boolean; onClose?: () => void }) {
   useEffect(() => {
-    const t = setTimeout(() => { window.location.href = "/dashboard?checkout=success"; }, 2000);
+    const t = setTimeout(() => {
+      if (noRedirect) onClose?.();
+      else window.location.href = "/dashboard?checkout=success";
+    }, 2000);
     return () => clearTimeout(t);
-  }, []);
+  }, [noRedirect, onClose]);
   return (
     <div className="flex flex-col items-center justify-center gap-4 py-12 text-center">
       <CheckCircle2 className="h-16 w-16 text-green-500" />
       <h3 className="text-xl font-bold">¡Suscripción activada!</h3>
-      <p className="text-sm text-muted-foreground">Redirigiendo a tu dashboard…</p>
+      <p className="text-sm text-muted-foreground">
+        {noRedirect ? "Tu archivo se está descargando…" : "Redirigiendo a tu dashboard…"}
+      </p>
     </div>
   );
 }
@@ -359,9 +364,11 @@ interface PaywallModalProps {
   userName?: string;
   /** Called immediately after payment succeeds, before the success screen redirect */
   onPaymentSuccess?: () => void;
+  /** When true, close the modal instead of redirecting to dashboard after payment (for conversion tools) */
+  noRedirect?: boolean;
 }
 
-export function PaywallModal({ open, onClose, toolName, userEmail, userName, onPaymentSuccess }: PaywallModalProps) {
+export function PaywallModal({ open, onClose, toolName, userEmail, userName, onPaymentSuccess, noRedirect }: PaywallModalProps) {
   const { locale } = useLanguage();
   const defaultCurrency: CurrencyCode = LOCALE_CURRENCY[locale] ?? DEFAULT_CURRENCY;
 
@@ -502,7 +509,7 @@ export function PaywallModal({ open, onClose, toolName, userEmail, userName, onP
             {/* Form body */}
             <div className="flex-1 overflow-y-auto px-6 py-5">
               {success ? (
-                <SuccessScreen />
+                <SuccessScreen noRedirect={noRedirect} onClose={onClose} />
               ) : loading || !clientSecret ? (
                 <div className="flex h-48 flex-col items-center justify-center gap-3 text-muted-foreground">
                   <Loader2 className="h-7 w-7 animate-spin text-primary" />
