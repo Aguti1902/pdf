@@ -12,7 +12,12 @@ import {
   useElements,
   PaymentRequestButtonElement,
 } from "@stripe/react-stripe-js";
-import { loadStripe, type PaymentRequest, type StripeCardNumberElementOptions } from "@stripe/stripe-js";
+import {
+  loadStripe,
+  type PaymentRequest,
+  type StripeCardNumberElementOptions,
+  type PaymentRequestPaymentMethodEvent,
+} from "@stripe/stripe-js";
 import { Loader2, X, ShieldCheck, Lock, CreditCard, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import { CURRENCIES, DEFAULT_CURRENCY, PRICING, type CurrencyCode } from "@/config/pricing";
@@ -59,23 +64,79 @@ function CheckoutForm({ clientSecret, customerId, currency, userEmail, onSuccess
   const [loading,      setLoading]      = useState(false);
   const [error,        setError]        = useState("");
   const [payReq,       setPayReq]       = useState<PaymentRequest | null>(null);
-  const [activeMethod, setActiveMethod] = useState<"card" | "google">("card");
+  const [activeMethod, setActiveMethod] = useState<"card" | "wallet">("card");
 
   const curr = CURRENCIES[currency];
 
-  /* Google Pay / Apple Pay button */
+  /* ── Helper: activate subscription after successful payment ───────── */
+  const activateSubscription = useCallback(async (pmId: string, piId: string) => {
+    try {
+      const res = await fetch("/api/stripe/activate-subscription", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ customerId, paymentMethodId: pmId, paymentIntentId: piId, currency }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      onSuccess();
+    } catch (err) {
+      console.error(err);
+      toast.info("Pago procesado. Activando acceso…");
+      onSuccess();
+    }
+  }, [customerId, currency, onSuccess]);
+
+  /* ── Google Pay / Apple Pay ────────────────────────────────────────── */
   useEffect(() => {
     if (!stripe) return;
     const pr = stripe.paymentRequest({
-      country: "ES",
-      currency: currency.toLowerCase(),
-      total: { label: "PDFCraft — 2-Day Trial", amount: Math.round(curr.trialAmount * 100) },
+      country:           "ES",
+      currency:          currency.toLowerCase(),
+      total:             { label: `PDFCraft — ${PRICING.trial.days}-Day Trial`, amount: Math.round(curr.trialAmount * 100) },
       requestPayerName:  true,
       requestPayerEmail: true,
     });
-    pr.canMakePayment().then(result => { if (result) setPayReq(pr); });
+    pr.canMakePayment().then(result => {
+      if (result) setPayReq(pr);
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stripe, currency, curr.trialAmount]);
 
+  /* ── Google Pay paymentmethod event handler ───────────────────────── */
+  useEffect(() => {
+    if (!payReq || !stripe) return;
+
+    const handler = async (ev: PaymentRequestPaymentMethodEvent) => {
+      // Confirm the PaymentIntent with the wallet payment method
+      const { paymentIntent, error: confirmError } = await stripe.confirmCardPayment(
+        clientSecret,
+        { payment_method: ev.paymentMethod.id },
+        { handleActions: false },
+      );
+
+      if (confirmError) {
+        ev.complete("fail");
+        setError(confirmError.message ?? "El pago no pudo procesarse.");
+        return;
+      }
+
+      ev.complete("success");
+
+      // Handle 3DS / additional actions if required
+      if (paymentIntent?.status === "requires_action") {
+        const { error: actionError, paymentIntent: pi2 } = await stripe.confirmCardPayment(clientSecret);
+        if (actionError) { setError(actionError.message ?? "Autenticación fallida."); return; }
+        if (pi2?.payment_method) await activateSubscription(pi2.payment_method as string, pi2.id);
+      } else if (paymentIntent?.status === "succeeded" && paymentIntent.payment_method) {
+        await activateSubscription(paymentIntent.payment_method as string, paymentIntent.id);
+      }
+    };
+
+    payReq.on("paymentmethod", handler);
+    return () => { payReq.off("paymentmethod", handler); };
+  }, [payReq, stripe, clientSecret, activateSubscription]);
+
+  /* ── Card submit ──────────────────────────────────────────────────── */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!stripe || !elements) return;
@@ -88,14 +149,10 @@ function CheckoutForm({ clientSecret, customerId, currency, userEmail, onSuccess
     const cardNumber = elements.getElement(CardNumberElement);
     if (!cardNumber) { setLoading(false); return; }
 
-    // 1. Confirm the trial-fee PaymentIntent (charges 0,50€ + saves card)
     const { paymentIntent, error: piError } = await stripe.confirmCardPayment(clientSecret, {
       payment_method: {
-        card:           cardNumber,
-        billing_details: {
-          name:  cardName,
-          email: userEmail,
-        },
+        card:            cardNumber,
+        billing_details: { name: cardName, email: userEmail },
       },
     });
 
@@ -111,57 +168,37 @@ function CheckoutForm({ clientSecret, customerId, currency, userEmail, onSuccess
       return;
     }
 
-    // 2. Activate subscription using the saved payment method
-    try {
-      const res = await fetch("/api/stripe/activate-subscription", {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({
-          customerId,
-          paymentMethodId:  paymentIntent.payment_method,
-          paymentIntentId:  paymentIntent.id,
-          currency,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      onSuccess();
-    } catch (err) {
-      console.error(err);
-      // Payment went through; subscription activation failed — webhook will retry
-      toast.info("Pago procesado. Activando acceso…");
-      onSuccess();
-    }
+    await activateSubscription(paymentIntent.payment_method as string, paymentIntent.id);
+    setLoading(false);
   };
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
 
-      {/* Payment method tabs */}
-      <div className="flex gap-2">
-        <button
-          type="button"
-          onClick={() => setActiveMethod("card")}
-          className={`flex flex-1 items-center justify-center gap-2 rounded-lg border-2 py-2.5 text-sm font-medium transition-all ${
-            activeMethod === "card"
-              ? "border-primary bg-primary/5 text-primary"
-              : "border-border text-muted-foreground hover:border-primary/40"
-          }`}
-        >
-          <CreditCard className="h-4 w-4" />
-          Tarjeta
-        </button>
-        {payReq && (
+      {/* Payment method tabs — only show wallet tab when available */}
+      {payReq && (
+        <div className="flex gap-2">
           <button
             type="button"
-            onClick={() => setActiveMethod("google")}
+            onClick={() => setActiveMethod("card")}
             className={`flex flex-1 items-center justify-center gap-2 rounded-lg border-2 py-2.5 text-sm font-medium transition-all ${
-              activeMethod === "google"
+              activeMethod === "card"
                 ? "border-primary bg-primary/5 text-primary"
                 : "border-border text-muted-foreground hover:border-primary/40"
             }`}
           >
-            {/* Google Pay icon */}
+            <CreditCard className="h-4 w-4" />
+            Tarjeta
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveMethod("wallet")}
+            className={`flex flex-1 items-center justify-center gap-2 rounded-lg border-2 py-2.5 text-sm font-medium transition-all ${
+              activeMethod === "wallet"
+                ? "border-primary bg-primary/5 text-primary"
+                : "border-border text-muted-foreground hover:border-primary/40"
+            }`}
+          >
             <svg className="h-5" viewBox="0 0 41 17" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M19.44 8.49c0 2.37-1.83 4.1-4.08 4.1s-4.08-1.73-4.08-4.1c0-2.39 1.83-4.1 4.08-4.1s4.08 1.71 4.08 4.1zm-1.79 0c0-1.49-1.08-2.5-2.29-2.5s-2.29 1.01-2.29 2.5c0 1.47 1.08 2.5 2.29 2.5s2.29-1.01 2.29-2.5z" fill="#EA4335"/>
               <path d="M28.17 8.49c0 2.37-1.83 4.1-4.08 4.1s-4.08-1.73-4.08-4.1c0-2.38 1.83-4.1 4.08-4.1s4.08 1.71 4.08 4.1zm-1.79 0c0-1.49-1.08-2.5-2.29-2.5s-2.29 1.01-2.29 2.5c0 1.47 1.08 2.5 2.29 2.5s2.29-1.01 2.29-2.5z" fill="#FBBC05"/>
@@ -171,13 +208,29 @@ function CheckoutForm({ clientSecret, customerId, currency, userEmail, onSuccess
             </svg>
             Google Pay
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
-      {activeMethod === "google" && payReq ? (
-        <PaymentRequestButtonElement
-          options={{ paymentRequest: payReq, style: { paymentRequestButton: { height: "48px" } } }}
-        />
+      {/* ── Wallet (Google Pay / Apple Pay) ─────────────────────────── */}
+      {activeMethod === "wallet" && payReq ? (
+        <>
+          <p className="text-center text-xs text-muted-foreground">
+            Acepta una prueba de {PRICING.trial.days} días ({curr.trialLabel}), luego {curr.monthlyLabel}/mes.
+            Puedes cancelar cuando quieras.
+          </p>
+          <PaymentRequestButtonElement
+            options={{ paymentRequest: payReq, style: { paymentRequestButton: { height: "52px", theme: "dark" } } }}
+          />
+          {error && (
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600 dark:bg-red-900/20 dark:text-red-400">
+              {error}
+            </p>
+          )}
+          <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
+            <ShieldCheck className="h-3.5 w-3.5 text-green-500" />
+            Pago seguro SSL · Cancela cuando quieras
+          </div>
+        </>
       ) : (
         <>
           {/* Card number */}
@@ -225,55 +278,55 @@ function CheckoutForm({ clientSecret, customerId, currency, userEmail, onSuccess
               className="w-full rounded-lg border border-border bg-background px-3 py-3 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
             />
           </div>
+
+          {/* Error */}
+          {error && (
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600 dark:bg-red-900/20 dark:text-red-400">
+              {error}
+            </p>
+          )}
+
+          {/* Terms checkbox */}
+          <label className="flex cursor-pointer items-start gap-2.5">
+            <input
+              type="checkbox"
+              checked={agreed}
+              onChange={e => setAgreed(e.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-primary"
+            />
+            <span className="text-[11px] leading-relaxed text-muted-foreground">
+              Al marcar esta casilla, aceptas una prueba de {PRICING.trial.days} días ({curr.trialLabel}) y
+              una suscripción mensual posterior de {curr.monthlyLabel}. Autorizas los cargos recurrentes y
+              puedes cancelar en cualquier momento.{" "}
+              <Link href="/legal/subscription" className="text-primary underline" target="_blank">
+                Términos
+              </Link>{" "}
+              y{" "}
+              <Link href="/legal/privacy" className="text-primary underline" target="_blank">
+                Privacidad
+              </Link>.
+            </span>
+          </label>
+
+          {/* CTA */}
+          <button
+            type="submit"
+            disabled={loading || !stripe}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-base font-bold text-primary-foreground transition hover:opacity-90 disabled:opacity-60"
+          >
+            {loading ? (
+              <><Loader2 className="h-4 w-4 animate-spin" /> Procesando…</>
+            ) : (
+              <><Lock className="h-4 w-4" /> Comenzar prueba</>
+            )}
+          </button>
+
+          <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
+            <ShieldCheck className="h-3.5 w-3.5 text-green-500" />
+            Pago seguro SSL · Cancela cuando quieras
+          </div>
         </>
       )}
-
-      {/* Error */}
-      {error && (
-        <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600 dark:bg-red-900/20 dark:text-red-400">
-          {error}
-        </p>
-      )}
-
-      {/* Terms checkbox */}
-      <label className="flex cursor-pointer items-start gap-2.5">
-        <input
-          type="checkbox"
-          checked={agreed}
-          onChange={e => setAgreed(e.target.checked)}
-          className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-primary"
-        />
-        <span className="text-[11px] leading-relaxed text-muted-foreground">
-          Al marcar esta casilla, aceptas una prueba de {PRICING.trial.days} días ({curr.trialLabel}) y
-          una suscripción mensual posterior de {curr.monthlyLabel}. Autorizas los cargos recurrentes y
-          puedes cancelar en cualquier momento.{" "}
-          <Link href="/legal/subscription" className="text-primary underline" target="_blank">
-            Términos
-          </Link>{" "}
-          y{" "}
-          <Link href="/legal/privacy" className="text-primary underline" target="_blank">
-            Privacidad
-          </Link>.
-        </span>
-      </label>
-
-      {/* CTA */}
-      <button
-        type="submit"
-        disabled={loading || !stripe}
-        className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-base font-bold text-primary-foreground transition hover:opacity-90 disabled:opacity-60"
-      >
-        {loading ? (
-          <><Loader2 className="h-4 w-4 animate-spin" /> Procesando…</>
-        ) : (
-          <><Lock className="h-4 w-4" /> Comenzar prueba</>
-        )}
-      </button>
-
-      <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
-        <ShieldCheck className="h-3.5 w-3.5 text-green-500" />
-        Pago seguro SSL · Cancela cuando quieras
-      </div>
     </form>
   );
 }
