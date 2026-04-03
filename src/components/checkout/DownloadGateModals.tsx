@@ -1,7 +1,9 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { AuthModal } from "@/components/auth/AuthModal";
 import { PaywallModal } from "@/components/checkout/PaywallModal";
+import { triggerDownload } from "@/lib/pdf-processing/download";
 import type { useDownloadGate } from "@/hooks/useDownloadGate";
 
 interface Props {
@@ -11,9 +13,35 @@ interface Props {
 
 /**
  * Renders the auth + paywall modals for the download gate flow.
- * Drop this anywhere inside the processor component.
+ * - Fetches the logged-in user's email/name so Stripe creates a real customer (not "guest").
+ * - After payment, downloads the pending file before redirecting to dashboard.
  */
 export function DownloadGateModals({ gate, toolName }: Props) {
+  const [userEmail, setUserEmail] = useState<string>("");
+  const [userName,  setUserName]  = useState<string>("");
+
+  // Fetch current user whenever the paywall (or auth) step becomes active
+  useEffect(() => {
+    if (gate.step === "idle") return;
+    fetch("/api/auth/me")
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.user) {
+          setUserEmail(data.user.email ?? "");
+          setUserName(data.user.name  ?? "");
+        }
+      })
+      .catch(() => {});
+  }, [gate.step]);
+
+  /** Called right after Stripe confirms payment — triggers the download before the success redirect */
+  const handlePaymentSuccess = () => {
+    if (gate.pending.current) {
+      triggerDownload(gate.pending.current.blob, gate.pending.current.filename);
+      gate.pending.current = null;
+    }
+  };
+
   return (
     <>
       <AuthModal
@@ -25,6 +53,9 @@ export function DownloadGateModals({ gate, toolName }: Props) {
         open={gate.step === "paywall"}
         onClose={gate.close}
         toolName={toolName}
+        userEmail={userEmail}
+        userName={userName}
+        onPaymentSuccess={handlePaymentSuccess}
       />
     </>
   );

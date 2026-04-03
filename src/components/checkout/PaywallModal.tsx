@@ -357,9 +357,11 @@ interface PaywallModalProps {
   toolName?: string;
   userEmail?: string;
   userName?: string;
+  /** Called immediately after payment succeeds, before the success screen redirect */
+  onPaymentSuccess?: () => void;
 }
 
-export function PaywallModal({ open, onClose, toolName, userEmail, userName }: PaywallModalProps) {
+export function PaywallModal({ open, onClose, toolName, userEmail, userName, onPaymentSuccess }: PaywallModalProps) {
   const { locale } = useLanguage();
   const defaultCurrency: CurrencyCode = LOCALE_CURRENCY[locale] ?? DEFAULT_CURRENCY;
 
@@ -513,7 +515,7 @@ export function PaywallModal({ open, onClose, toolName, userEmail, userName }: P
                     customerId={customerId}
                     currency={currency}
                     userEmail={userEmail}
-                    onSuccess={() => setSuccess(true)}
+                    onSuccess={() => { onPaymentSuccess?.(); setSuccess(true); }}
                   />
                 </Elements>
               )}
