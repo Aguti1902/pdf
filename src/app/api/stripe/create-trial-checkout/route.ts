@@ -2,14 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { CURRENCIES, DEFAULT_CURRENCY, type CurrencyCode } from "@/config/pricing";
 
 /**
- * Creates a Stripe customer and a PaymentIntent for the trial fee (e.g. 0,50€).
- * setup_future_usage: "off_session" saves the card for recurring charges.
+ * Creates (or reuses) a Stripe customer and a PaymentIntent for the trial fee.
+ * Pass `customerId` to reuse an existing customer (e.g. on currency change).
+ * setup_future_usage: "off_session" saves the card for recurring subscription charges.
  */
 export async function POST(req: NextRequest) {
   try {
     const { stripe, createStripeCustomer } = await import("@/lib/stripe");
     const body = await req.json();
-    const { userEmail, userName, currency } = body;
+    const { userEmail, userName, currency, customerId: existingCustomerId } = body;
 
     const email = userEmail ?? "guest@pdfcraft.online";
     const name  = userName  ?? "Guest User";
@@ -19,29 +20,36 @@ export async function POST(req: NextRequest) {
       : DEFAULT_CURRENCY;
     const currencyConfig = CURRENCIES[currencyCode];
 
-    // Create (or reuse) customer
-    const customer = await createStripeCustomer(email, name);
+    // Reuse existing customer if provided, otherwise create a new one
+    let customerId: string;
+    if (existingCustomerId) {
+      customerId = existingCustomerId;
+    } else {
+      const customer = await createStripeCustomer(email, name);
+      customerId = customer.id;
+    }
 
-    // PaymentIntent for the trial fee — saves the payment method for future subscription charges
+    // PaymentIntent for the trial fee
     const intent = await stripe.paymentIntents.create({
-      amount:               Math.round(currencyConfig.trialAmount * 100),
-      currency:             currencyCode.toLowerCase(),
-      customer:             customer.id,
-      setup_future_usage:   "off_session",
-      description:          "PDFCraft — 2-Day Trial Access",
-      metadata:             { type: "trial_fee", userEmail: email, currency: currencyCode },
-      automatic_payment_methods: { enabled: true },
+      amount:             Math.round(currencyConfig.trialAmount * 100),
+      currency:           currencyCode.toLowerCase(),
+      customer:           customerId,
+      setup_future_usage: "off_session",
+      description:        "PDFCraft — 2-Day Trial Access",
+      metadata:           { type: "trial_fee", userEmail: email, currency: currencyCode },
+      payment_method_types: ["card"],
     });
 
     return NextResponse.json({
-      clientSecret: intent.client_secret,
-      customerId:   customer.id,
-      currency:     currencyCode,
-      trialAmount:  currencyConfig.trialLabel,
+      clientSecret:  intent.client_secret,
+      customerId,
+      currency:      currencyCode,
+      trialAmount:   currencyConfig.trialLabel,
       monthlyAmount: currencyConfig.monthlyLabel,
     });
-  } catch (err) {
-    console.error("[create-trial-checkout]", err);
-    return NextResponse.json({ error: "Failed to create checkout." }, { status: 500 });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[create-trial-checkout]", message);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

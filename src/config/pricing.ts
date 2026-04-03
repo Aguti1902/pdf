@@ -1,20 +1,20 @@
 // ─── Multi-currency pricing ──────────────────────────────────────────────────
 // Amounts in the currency's major unit (e.g. EUR cents → 0.50 → 50 on Stripe)
 export const CURRENCIES = {
-  EUR: { symbol: "€", flag: "🇪🇺", trialAmount: 0.50, monthlyAmount: 49.90,
-         trialLabel: "0,50 €",   monthlyLabel: "49,90 €"   },
-  USD: { symbol: "$", flag: "🇺🇸", trialAmount: 0.50, monthlyAmount: 49.90,
-         trialLabel: "$0.50",    monthlyLabel: "$49.90"    },
-  GBP: { symbol: "£", flag: "🇬🇧", trialAmount: 0.50, monthlyAmount: 44.90,
-         trialLabel: "£0.50",    monthlyLabel: "£44.90"    },
-  BRL: { symbol: "R$", flag: "🇧🇷", trialAmount: 2.99, monthlyAmount: 249.90,
-         trialLabel: "R$2,99",   monthlyLabel: "R$249,90"  },
-  MXN: { symbol: "$", flag: "🇲🇽", trialAmount: 9.99, monthlyAmount: 999.00,
-         trialLabel: "$9,99 MXN", monthlyLabel: "$999 MXN" },
-  CAD: { symbol: "CA$", flag: "🇨🇦", trialAmount: 0.99, monthlyAmount: 67.90,
-         trialLabel: "CA$0.99",  monthlyLabel: "CA$67.90"  },
-  AUD: { symbol: "A$", flag: "🇦🇺", trialAmount: 0.99, monthlyAmount: 79.90,
-         trialLabel: "A$0.99",   monthlyLabel: "A$79.90"   },
+  EUR: { symbol: "€",   flag: "🇪🇺", trialAmount: 0.50,  monthlyAmount: 49.90,
+         trialLabel: "0,50 €",    monthlyLabel: "49,90 €"   },
+  USD: { symbol: "$",   flag: "🇺🇸", trialAmount: 0.99,  monthlyAmount: 49.90,
+         trialLabel: "$0.99",     monthlyLabel: "$49.90"    },
+  GBP: { symbol: "£",   flag: "🇬🇧", trialAmount: 0.99,  monthlyAmount: 44.90,
+         trialLabel: "£0.99",     monthlyLabel: "£44.90"    },
+  BRL: { symbol: "R$",  flag: "🇧🇷", trialAmount: 2.99,  monthlyAmount: 249.90,
+         trialLabel: "R$2,99",    monthlyLabel: "R$249,90"  },
+  MXN: { symbol: "$",   flag: "🇲🇽", trialAmount: 10.00, monthlyAmount: 999.00,
+         trialLabel: "$10 MXN",   monthlyLabel: "$999 MXN"  },
+  CAD: { symbol: "CA$", flag: "🇨🇦", trialAmount: 0.99,  monthlyAmount: 67.90,
+         trialLabel: "CA$0.99",   monthlyLabel: "CA$67.90"  },
+  AUD: { symbol: "A$",  flag: "🇦🇺", trialAmount: 0.99,  monthlyAmount: 79.90,
+         trialLabel: "A$0.99",    monthlyLabel: "A$79.90"   },
 } as const;
 
 export type CurrencyCode = keyof typeof CURRENCIES;

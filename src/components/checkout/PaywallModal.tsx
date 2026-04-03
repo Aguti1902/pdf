@@ -320,7 +320,7 @@ export function PaywallModal({ open, onClose, toolName, userEmail, userName }: P
   // Sync currency with locale
   useEffect(() => { setCurrency(LOCALE_CURRENCY[locale] ?? DEFAULT_CURRENCY); }, [locale]);
 
-  const fetchIntent = useCallback(async (curr: CurrencyCode) => {
+  const fetchIntent = useCallback(async (curr: CurrencyCode, existingCustomerId?: string) => {
     const key = `${curr}|${userEmail ?? "guest"}`;
     if (fetchedKey.current === key) return;
     fetchedKey.current = key;
@@ -330,14 +330,21 @@ export function PaywallModal({ open, onClose, toolName, userEmail, userName }: P
       const res = await fetch("/api/stripe/create-trial-checkout", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ userEmail, userName, currency: curr }),
+        body:    JSON.stringify({
+          userEmail,
+          userName,
+          currency: curr,
+          // Reuse existing customer to avoid duplicates on currency change
+          ...(existingCustomerId && { customerId: existingCustomerId }),
+        }),
       });
-      if (!res.ok) throw new Error();
       const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "checkout_failed");
       setSecret(data.clientSecret);
       setCustomerId(data.customerId);
-    } catch {
-      toast.error("No se pudo cargar el formulario de pago.");
+    } catch (err) {
+      console.error(err);
+      toast.error("No se pudo cargar el formulario de pago. Inténtalo de nuevo.");
       fetchedKey.current = "";
     } finally {
       setLoading(false);
@@ -354,7 +361,8 @@ export function PaywallModal({ open, onClose, toolName, userEmail, userName }: P
   const handleCurrencyChange = (c: CurrencyCode) => {
     setCurrency(c);
     fetchedKey.current = "";
-    fetchIntent(c);
+    // Pass existing customerId to avoid creating a new Stripe customer on every currency switch
+    fetchIntent(c, customerId || undefined);
   };
 
   const curr = CURRENCIES[currency];
