@@ -1,15 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { DashboardShell } from "@/components/layout/DashboardShell";
 import { Button } from "@/components/ui/button";
 import {
   FileText, Download, Pencil,
-  FolderPlus, Clock, Trash2, Loader2, Zap,
+  FolderPlus, Clock, Trash2, Loader2, Zap, Folder, X, Plus,
 } from "lucide-react";
 import Link from "next/link";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { PaywallModal } from "@/components/checkout/PaywallModal";
+
+interface FolderItem { id: string; name: string; createdAt: string; }
 
 interface DocRow {
   id: string; title: string; fileSize: number;
@@ -26,6 +28,10 @@ export default function DashboardPage() {
   const [loading,       setLoading]       = useState(true);
   const [search,        setSearch]        = useState("");
   const [showPaywall,   setShowPaywall]   = useState(false);
+  const [folders,       setFolders]       = useState<FolderItem[]>([]);
+  const [showFolderModal, setShowFolderModal] = useState(false);
+  const [folderName,    setFolderName]    = useState("");
+  const folderInputRef  = useRef<HTMLInputElement>(null);
   const { t, messages } = useLanguage();
   const d = messages ? t("dashboard") : null;
 
@@ -36,11 +42,36 @@ export default function DashboardPage() {
           fetch("/api/auth/me"),
           fetch("/api/documents"),
         ]);
-        if (meRes.ok)   setUser((await meRes.json()).user);
+        const meData = meRes.ok ? await meRes.json() : null;
+        if (meData?.user) {
+          setUser(meData.user);
+          // Load folders from localStorage keyed by userId
+          try {
+            const stored = localStorage.getItem(`pdfcraft_folders_${meData.user.id}`);
+            if (stored) setFolders(JSON.parse(stored));
+          } catch { /* ignore */ }
+        }
         if (docsRes.ok) setDocs((await docsRes.json()).documents ?? []);
       } finally { setLoading(false); }
     })();
   }, []);
+
+  const saveFolders = (items: FolderItem[]) => {
+    setFolders(items);
+    if (user?.id) {
+      try { localStorage.setItem(`pdfcraft_folders_${user.id}`, JSON.stringify(items)); } catch { /* ignore */ }
+    }
+  };
+
+  const createFolder = () => {
+    if (!folderName.trim()) return;
+    const newFolder: FolderItem = { id: crypto.randomUUID(), name: folderName.trim(), createdAt: new Date().toISOString() };
+    saveFolders([...folders, newFolder]);
+    setFolderName("");
+    setShowFolderModal(false);
+  };
+
+  const deleteFolder = (id: string) => saveFolders(folders.filter(f => f.id !== id));
 
   const subStatus = user?.subscription?.status;
   const isPremium = subStatus === "active" || subStatus === "trialing";
@@ -151,16 +182,83 @@ export default function DashboardPage() {
           {/* Folders */}
           <div>
             <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-neutral-700">{d?.folders ?? "Folders"}</h2>
-            </div>
-            <div className="rounded-xl border border-neutral-200 bg-white py-8 text-center">
-              <FolderPlus className="mx-auto mb-2 h-7 w-7 text-neutral-300" />
-              <p className="text-sm text-neutral-400">{d?.foldersEmpty ?? "Here you can manage your folders"}</p>
-              <button className="mt-3 rounded-md bg-neutral-900 px-4 py-1.5 text-xs font-medium text-white hover:bg-neutral-800 transition-colors">
-                {d?.createFolder ?? "Create Folder"}
+              <h2 className="text-sm font-semibold text-neutral-700">{d?.folders ?? "Carpetas"}</h2>
+              <button
+                onClick={() => { setShowFolderModal(true); setTimeout(() => folderInputRef.current?.focus(), 100); }}
+                className="flex items-center gap-1.5 rounded-md border border-neutral-200 bg-white px-3 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50 transition-colors"
+              >
+                <Plus className="h-3.5 w-3.5" /> {d?.createFolder ?? "Nueva carpeta"}
               </button>
             </div>
+
+            {folders.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-neutral-200 bg-neutral-50 py-8 text-center">
+                <FolderPlus className="mx-auto mb-2 h-7 w-7 text-neutral-300" />
+                <p className="text-sm text-neutral-400">{d?.foldersEmpty ?? "Aquí puedes gestionar tus carpetas"}</p>
+                <button
+                  onClick={() => { setShowFolderModal(true); setTimeout(() => folderInputRef.current?.focus(), 100); }}
+                  className="mt-3 rounded-md bg-neutral-900 px-4 py-1.5 text-xs font-medium text-white hover:bg-neutral-800 transition-colors"
+                >
+                  {d?.createFolder ?? "Crear carpeta"}
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
+                {folders.map(folder => (
+                  <div key={folder.id} className="group relative flex flex-col items-center gap-2 rounded-xl border border-neutral-200 bg-white p-4 hover:border-neutral-300 hover:shadow-sm transition-all cursor-pointer">
+                    <Folder className="h-8 w-8 text-amber-400" />
+                    <p className="text-xs font-medium text-neutral-700 truncate w-full text-center">{folder.name}</p>
+                    <button
+                      onClick={() => deleteFolder(folder.id)}
+                      className="absolute top-1.5 right-1.5 hidden group-hover:flex h-5 w-5 items-center justify-center rounded-full bg-neutral-100 hover:bg-red-100 hover:text-red-600 text-neutral-400 transition-colors"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  onClick={() => { setShowFolderModal(true); setTimeout(() => folderInputRef.current?.focus(), 100); }}
+                  className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-neutral-200 bg-neutral-50 p-4 hover:border-neutral-300 hover:bg-neutral-100 transition-all cursor-pointer"
+                >
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-neutral-100">
+                    <Plus className="h-4 w-4 text-neutral-400" />
+                  </div>
+                  <p className="text-xs text-neutral-400">Nueva carpeta</p>
+                </button>
+              </div>
+            )}
           </div>
+
+          {/* Create folder modal */}
+          {showFolderModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+              <div className="w-full max-w-sm rounded-2xl border border-neutral-200 bg-white p-6 shadow-xl">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-base font-bold text-neutral-900">Nueva carpeta</h3>
+                  <button onClick={() => setShowFolderModal(false)} className="rounded-full p-1 hover:bg-neutral-100 text-neutral-400">
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+                <input
+                  ref={folderInputRef}
+                  type="text"
+                  placeholder="Nombre de la carpeta"
+                  value={folderName}
+                  onChange={e => setFolderName(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && createFolder()}
+                  className="w-full rounded-lg border border-neutral-200 px-3 py-2.5 text-sm focus:border-[#2563EB] focus:outline-none focus:ring-1 focus:ring-[#2563EB]/30"
+                />
+                <div className="mt-4 flex gap-2 justify-end">
+                  <button onClick={() => setShowFolderModal(false)} className="rounded-lg border border-neutral-200 px-4 py-2 text-sm text-neutral-600 hover:bg-neutral-50 transition-colors">
+                    Cancelar
+                  </button>
+                  <button onClick={createFolder} disabled={!folderName.trim()} className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800 disabled:opacity-50 transition-colors">
+                    Crear
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Documents table */}
           <div>

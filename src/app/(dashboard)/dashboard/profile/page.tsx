@@ -101,104 +101,119 @@ export default function ProfilePage() {
 
   return (
     <DashboardShell user={user ?? undefined}>
-      <div className="px-8 py-6 space-y-6 max-w-2xl">
-        <div className="border-b pb-5">
-          <h1 className="text-xl font-bold text-neutral-900">{d?.profileTitle ?? "Profile"}</h1>
-          <p className="text-sm text-neutral-500 mt-1">{d?.profileSubtitle ?? "Manage your personal information."}</p>
+      <div className="min-h-full">
+        <div className="flex items-center justify-between border-b px-8 py-5">
+          <div>
+            <h1 className="text-xl font-bold text-neutral-900">{d?.profileTitle ?? "Mi cuenta"}</h1>
+            <p className="text-sm text-neutral-500 mt-0.5">{d?.profileSubtitle ?? "Gestiona tu información personal."}</p>
+          </div>
         </div>
+      <div className="px-8 py-6">
+        <div className="grid grid-cols-3 gap-6">
 
-        {/* Avatar */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">{d?.profilePhoto ?? "Profile Photo"}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-4">
-              <div className="relative">
-                <Avatar className="h-16 w-16">
-                  <AvatarFallback className="bg-primary/10 text-primary font-bold text-xl">
-                    {initials}
-                  </AvatarFallback>
-                </Avatar>
-                <button className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm">
-                  <Camera className="h-3 w-3" />
-                </button>
-              </div>
-              <div>
-                <p className="text-sm font-medium">{user?.name ?? user?.email}</p>
-                <p className="text-xs text-muted-foreground">{user?.email}</p>
-                <Button variant="outline" size="sm" className="mt-2 h-7 text-xs">
-                  {d?.changePhoto ?? "Change photo"}
+          {/* Col 1: Avatar + info */}
+          <div className="col-span-2 space-y-5">
+            {/* Avatar */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">{d?.profilePhoto ?? "Foto de perfil"}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-5">
+                  <div className="relative">
+                    <Avatar className="h-20 w-20">
+                      <AvatarFallback className="bg-primary/10 text-primary font-bold text-2xl">
+                        {initials}
+                      </AvatarFallback>
+                    </Avatar>
+                    <button className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm hover:opacity-90 transition-opacity">
+                      <Camera className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                  <div>
+                    <p className="text-base font-semibold">{user?.name ?? user?.email}</p>
+                    <p className="text-sm text-muted-foreground">{user?.email}</p>
+                    <Button variant="outline" size="sm" className="mt-2 h-8 text-xs">
+                      {d?.changePhoto ?? "Cambiar foto"}
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Personal info */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">{d?.personalInfo ?? "Información personal"}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="name">{d?.firstName ?? "Nombre completo"}</Label>
+                    <Input id="name" value={name} onChange={e => setName(e.target.value)} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="email">{d?.emailAddress ?? "Correo electrónico"}</Label>
+                    <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} />
+                  </div>
+                </div>
+                <Button size="sm" onClick={handleSaveProfile} disabled={saving}>
+                  {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}
+                  {d?.saveChanges ?? "Guardar cambios"}
                 </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
 
-        {/* Personal info */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">{d?.personalInfo ?? "Personal Information"}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="name">{d?.firstName ?? "Full Name"}</Label>
-              <Input id="name" value={name} onChange={e => setName(e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="email">{d?.emailAddress ?? "Email Address"}</Label>
-              <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} />
-            </div>
-            <Button size="sm" onClick={handleSaveProfile} disabled={saving}>
-              {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}
-              {d?.saveChanges ?? "Save Changes"}
-            </Button>
-          </CardContent>
-        </Card>
+            {/* Password */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">{d?.changePassword ?? "Cambiar contraseña"}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="currentPassword">{d?.currentPassword ?? "Contraseña actual"}</Label>
+                  <Input id="currentPassword" type="password" value={curPwd} onChange={e => setCurPwd(e.target.value)} />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="newPassword">{d?.newPassword ?? "Nueva contraseña"}</Label>
+                    <Input id="newPassword" type="password" value={newPwd} onChange={e => setNewPwd(e.target.value)} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="confirmPassword">{d?.confirmPassword ?? "Confirmar contraseña"}</Label>
+                    <Input id="confirmPassword" type="password" value={confPwd} onChange={e => setConfPwd(e.target.value)} />
+                  </div>
+                </div>
+                <Button size="sm" variant="outline" onClick={handleChangePassword} disabled={saving}>
+                  {d?.updatePassword ?? "Actualizar contraseña"}
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
 
-        {/* Password */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">{d?.changePassword ?? "Change Password"}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="currentPassword">{d?.currentPassword ?? "Current Password"}</Label>
-              <Input id="currentPassword" type="password" value={curPwd} onChange={e => setCurPwd(e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="newPassword">{d?.newPassword ?? "New Password"}</Label>
-              <Input id="newPassword" type="password" value={newPwd} onChange={e => setNewPwd(e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="confirmPassword">{d?.confirmPassword ?? "Confirm New Password"}</Label>
-              <Input id="confirmPassword" type="password" value={confPwd} onChange={e => setConfPwd(e.target.value)} />
-            </div>
-            <Button size="sm" variant="outline" onClick={handleChangePassword} disabled={saving}>
-              {d?.updatePassword ?? "Update Password"}
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Danger zone */}
-        <Card className="border-destructive/30">
-          <CardHeader>
-            <CardTitle className="text-base text-destructive">{d?.dangerZone ?? "Danger Zone"}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              {d?.deleteAccountDesc ?? "Permanently delete your account and all associated data. This action cannot be undone."}
-            </p>
-            <Button
-              variant="outline"
-              size="sm"
-              className="border-destructive/50 text-destructive hover:bg-destructive/5 hover:text-destructive"
-              onClick={() => toast.error("Please contact support to delete your account.")}
-            >
-              {d?.deleteAccount ?? "Delete Account"}
-            </Button>
-          </CardContent>
-        </Card>
+          {/* Col 2: Danger zone */}
+          <div className="space-y-5">
+            <Card className="border-destructive/30">
+              <CardHeader>
+                <CardTitle className="text-base text-destructive">{d?.dangerZone ?? "Zona de peligro"}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  {d?.deleteAccountDesc ?? "Elimina permanentemente tu cuenta y todos los datos asociados. Esta acción no se puede deshacer."}
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-destructive/50 text-destructive hover:bg-destructive/5 hover:text-destructive"
+                  onClick={() => toast.error("Contacta con soporte para eliminar tu cuenta.")}
+                >
+                  {d?.deleteAccount ?? "Eliminar cuenta"}
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
       </div>
     </DashboardShell>
   );
