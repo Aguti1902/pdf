@@ -108,7 +108,24 @@ export async function GET(req: NextRequest) {
     const token = await createSession({ userId: user.id, email: user.email, name: user.name });
     const c = setSessionCookie(token);
 
-    const response = NextResponse.redirect(`${appUrl}${redirectTo}`);
+    // Check active subscription — if none, trigger checkout popup on landing page
+    const sub = await prisma.subscription.findFirst({
+      where:   { userId: user.id },
+      orderBy: { createdAt: "desc" },
+    });
+    const now = new Date();
+    const isPremium = sub
+      ? (sub.status === "trialing" && !!sub.trialEnd && sub.trialEnd > now) ||
+        (sub.status === "active"   && !!sub.stripeCurrentPeriodEnd && sub.stripeCurrentPeriodEnd > now)
+      : false;
+
+    let finalRedirect = redirectTo;
+    if (!isPremium) {
+      const sep = finalRedirect.includes("?") ? "&" : "?";
+      finalRedirect = `${finalRedirect}${sep}checkout=1`;
+    }
+
+    const response = NextResponse.redirect(`${appUrl}${finalRedirect}`);
     response.cookies.set(c.name, c.value, c);
     // Clear CSRF state cookie
     response.cookies.set("google_oauth_state", "", { maxAge: 0, path: "/" });

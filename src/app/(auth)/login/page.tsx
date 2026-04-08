@@ -21,15 +21,25 @@ import { toast } from "sonner";
 import { SITE } from "@/config/seo";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { GoogleButton } from "@/components/auth/GoogleButton";
+import { PaywallModal } from "@/components/checkout/PaywallModal";
 
 function LoginPageInner() {
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loading,      setLoading]      = useState(false);
+  const [showPaywall,  setShowPaywall]  = useState(false);
+  const [payEmail,     setPayEmail]     = useState("");
+  const [payName,      setPayName]      = useState("");
+  const [hadSub,       setHadSub]       = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirect") ?? "";
   const { t, messages } = useLanguage();
   const l = messages ? t("login") : null;
+
+  const doRedirect = () => {
+    if (redirectTo) router.push(redirectTo);
+    else router.back();
+  };
 
   const form = useForm<SignInInput>({
     resolver: zodResolver(signInSchema),
@@ -47,8 +57,20 @@ function LoginPageInner() {
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Login failed");
       toast.success("Signed in successfully!");
-      if (redirectTo) router.push(redirectTo);
-      else router.back();
+      // Check subscription — show paywall if not active
+      try {
+        const subRes = await fetch("/api/subscription");
+        const sub = subRes.ok ? await subRes.json() : {};
+        if (!sub.isPremium) {
+          setPayEmail(json.user?.email ?? data.email);
+          setPayName(json.user?.name  ?? "");
+          setHadSub(sub.hadSubscription ?? false);
+          setShowPaywall(true);
+          setLoading(false);
+          return;
+        }
+      } catch { /* ignore, proceed to redirect */ }
+      doRedirect();
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Invalid email or password.");
     } finally {
@@ -65,6 +87,7 @@ function LoginPageInner() {
   const featKeys = ["feat1", "feat2", "feat3", "feat4"] as const;
 
   return (
+    <>
     <div className="flex min-h-screen">
       <div className="flex flex-1 flex-col items-center justify-center px-6 py-12">
         <div className="w-full max-w-sm">
@@ -176,6 +199,19 @@ function LoginPageInner() {
         </div>
       </div>
     </div>
+
+    {showPaywall && (
+      <PaywallModal
+        open={showPaywall}
+        onClose={doRedirect}
+        onPaymentSuccess={doRedirect}
+        userEmail={payEmail}
+        userName={payName}
+        hadSubscription={hadSub}
+        toolName="PDFCraft Premium"
+      />
+    )}
+    </>
   );
 }
 

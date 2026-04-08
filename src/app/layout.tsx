@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { DEFAULT_METADATA } from "@/config/seo";
 import { LanguageProvider } from "@/contexts/LanguageContext";
+import { CheckoutTrigger } from "@/components/checkout/CheckoutTrigger";
 import { cookies } from "next/headers";
 import type { Locale } from "@/lib/i18n";
 import { locales, defaultLocale } from "@/lib/i18n";
@@ -43,6 +44,7 @@ export default async function RootLayout({
         <LanguageProvider initialLocale={initialLocale}>
           <TooltipProvider>
             {children}
+            <CheckoutTrigger />
             <Toaster position="bottom-right" richColors />
           </TooltipProvider>
         </LanguageProvider>

@@ -3,6 +3,7 @@
 import { useState, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
@@ -21,15 +22,24 @@ import { toast } from "sonner";
 import { SITE } from "@/config/seo";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { GoogleButton } from "@/components/auth/GoogleButton";
+import { PaywallModal } from "@/components/checkout/PaywallModal";
 
 function SignUpPageInner() {
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loading,     setLoading]     = useState(false);
+  const [showPaywall, setShowPaywall] = useState(false);
+  const [payEmail,    setPayEmail]    = useState("");
+  const [payName,     setPayName]     = useState("");
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirect") ?? "";
   const { t, messages } = useLanguage();
   const s = messages ? t("signup") : null;
+
+  const doRedirect = () => {
+    if (redirectTo) router.push(redirectTo);
+    else router.back();
+  };
 
   const perksKeys = ["perk1", "perk2", "perk3"] as const;
   const defaultPerks = [
@@ -54,8 +64,12 @@ function SignUpPageInner() {
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Registration failed");
       toast.success(`Welcome to ${SITE.name}!`);
-      if (redirectTo) router.push(redirectTo);
-      else router.back();
+      // New users never have a subscription — show paywall immediately
+      setPayEmail(json.user?.email ?? data.email);
+      setPayName(json.user?.name  ?? data.name ?? "");
+      setShowPaywall(true);
+      setLoading(false);
+      return;
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Something went wrong.");
     } finally {
@@ -64,6 +78,7 @@ function SignUpPageInner() {
   };
 
   return (
+    <>
     <div className="flex min-h-screen">
       <div className="flex flex-1 flex-col items-center justify-center px-6 py-12">
         <div className="w-full max-w-sm">
@@ -191,6 +206,19 @@ function SignUpPageInner() {
         </div>
       </div>
     </div>
+
+    {showPaywall && (
+      <PaywallModal
+        open={showPaywall}
+        onClose={doRedirect}
+        onPaymentSuccess={doRedirect}
+        userEmail={payEmail}
+        userName={payName}
+        hadSubscription={false}
+        toolName="PDFCraft Premium"
+      />
+    )}
+    </>
   );
 }
 
