@@ -7,7 +7,7 @@ import {
   Upload, FileEdit, PenLine, ClipboardList, MessageSquare, Type,
   Highlighter, Pencil, Image, Combine, Scissors, Minimize2, RotateCw,
   Trash2, GripVertical, FileText, ImageDown, FilePlus, TableProperties,
-  Presentation, Search,
+  Search,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -18,7 +18,7 @@ interface UserData { id: string; email: string; name: string | null; }
 const ICON_MAP: Record<string, React.ElementType> = {
   FileEdit, PenLine, ClipboardList, MessageSquare, Type, Highlighter, Pencil,
   Image, Combine, Scissors, Minimize2, RotateCw, Trash2, GripVertical,
-  FileText, ImageDown, FilePlus, TableProperties, Presentation,
+  FileText, ImageDown, FilePlus, TableProperties,
 };
 
 // Tool hrefs use /{slug} directly (no /tools/ prefix)
@@ -66,10 +66,9 @@ const ALL_TOOLS = [
     color: "bg-green-50 text-green-600",
     ring: "hover:border-green-200",
     tools: [
-      { slug: "word-to-pdf",  icon: "FilePlus",         label: "Word a PDF",   desc: "Convierte documentos Word a PDF" },
-      { slug: "jpg-to-pdf",   icon: "FilePlus",         label: "JPG a PDF",    desc: "Convierte imágenes JPG a PDF" },
-      { slug: "excel-to-pdf", icon: "TableProperties",  label: "Excel a PDF",  desc: "Convierte hojas de cálculo a PDF" },
-      { slug: "ppt-to-pdf",   icon: "Presentation",     label: "PPT a PDF",    desc: "Convierte presentaciones a PDF", comingSoon: true },
+      { slug: "word-to-pdf",  icon: "FilePlus",        label: "Word a PDF",   desc: "Convierte documentos Word a PDF" },
+      { slug: "jpg-to-pdf",   icon: "FilePlus",        label: "JPG a PDF",    desc: "Convierte imágenes JPG a PDF" },
+      { slug: "excel-to-pdf", icon: "TableProperties", label: "Excel a PDF",  desc: "Convierte hojas de cálculo a PDF" },
     ],
   },
 ];
@@ -164,12 +163,8 @@ export default function NewDocumentPage() {
                   return (
                     <Link
                       key={tool.slug}
-                      href={tool.comingSoon ? "#" : `/${tool.slug}`}
-                      className={`relative flex items-center gap-3 rounded-xl border border-neutral-200 bg-white p-4 transition-all ${
-                        tool.comingSoon
-                          ? "opacity-50 cursor-default"
-                          : `hover:shadow-sm ${cat.ring} hover:border`
-                      }`}
+                      href={`/${tool.slug}`}
+                      className={`relative flex items-center gap-3 rounded-xl border border-neutral-200 bg-white p-4 transition-all hover:shadow-sm ${cat.ring} hover:border`}
                     >
                       <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${cat.color}`}>
                         <Icon className="h-4 w-4" />
@@ -178,11 +173,6 @@ export default function NewDocumentPage() {
                         <p className="text-sm font-semibold text-neutral-900 leading-tight">{tool.label}</p>
                         <p className="text-xs text-neutral-500 truncate mt-0.5">{tool.desc}</p>
                       </div>
-                      {tool.comingSoon && (
-                        <span className="absolute top-2 right-2 rounded-full bg-neutral-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-neutral-400">
-                          Pronto
-                        </span>
-                      )}
                     </Link>
                   );
                 })}

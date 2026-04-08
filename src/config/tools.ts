@@ -448,7 +448,7 @@ export const tools: Tool[] = [
       { question: "Does it preserve fonts?", answer: "Yes, all fonts, styles, and formatting are preserved in the PDF output." },
       { question: "Are there file size limits?", answer: "Free users can convert files up to 10MB. Premium users have a 100MB limit per file." },
     ],
-    relatedTools: ["pdf-to-word", "excel-to-pdf", "ppt-to-pdf"],
+    relatedTools: ["pdf-to-word", "excel-to-pdf", "jpg-to-pdf"],
   },
   {
     id: "jpg-to-pdf",
@@ -496,31 +496,7 @@ export const tools: Tool[] = [
       { question: "Will my charts be included?", answer: "Yes, all charts, graphs, and visual elements are preserved in the PDF conversion." },
       { question: "Does it support merged cells?", answer: "Yes, merged cells, conditional formatting, and most Excel features are preserved." },
     ],
-    relatedTools: ["word-to-pdf", "ppt-to-pdf", "pdf-to-word"],
-  },
-  {
-    id: "ppt-to-pdf",
-    name: "PPT to PDF",
-    slug: "ppt-to-pdf",
-    description: "Convert PowerPoint presentations to PDF slides.",
-    longDescription: "Export any .ppt or .pptx file as a high-quality PDF. Each slide becomes a PDF page with all animations noted.",
-    icon: "Presentation",
-    category: "convert-to",
-    color: "#EF4444",
-    bgColor: "#FEF2F2",
-    metaTitle: "PowerPoint to PDF Converter Online Free – PPT to PDF | PDFCraft",
-    metaDescription: "Convert PowerPoint to PDF online. Each slide exported as a PDF page. Free PPT to PDF converter.",
-    benefits: [
-      "Each slide becomes a PDF page",
-      "Preserves images and text",
-      "Works without PowerPoint",
-      "Supports .ppt and .pptx",
-    ],
-    faqs: [
-      { question: "Are slide transitions preserved?", answer: "Animations and transitions are not preserved in PDF format, but all content, layouts, and media are included." },
-      { question: "Can I choose which slides to convert?", answer: "Premium users can select specific slide ranges to convert." },
-    ],
-    relatedTools: ["word-to-pdf", "excel-to-pdf", "pdf-to-word"],
+    relatedTools: ["word-to-pdf", "jpg-to-pdf", "pdf-to-word"],
   },
 ];
 
@@ -575,7 +551,4 @@ export const CLIENT_PROCESSOR_TOOLS = new Set([
 ]);
 
 // ─── Coming-soon tools ────────────────────────────────────────────────────────
-// Require server-side processing (LibreOffice, OCR, etc.) — not yet implemented.
-export const COMING_SOON_TOOLS = new Set([
-  "ppt-to-pdf",
-]);
+export const COMING_SOON_TOOLS = new Set<string>();
