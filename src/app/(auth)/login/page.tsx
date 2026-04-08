@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
@@ -22,10 +22,12 @@ import { SITE } from "@/config/seo";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { GoogleButton } from "@/components/auth/GoogleButton";
 
-export default function LoginPage() {
+function LoginPageInner() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get("redirect") ?? "";
   const { t, messages } = useLanguage();
   const l = messages ? t("login") : null;
 
@@ -45,7 +47,8 @@ export default function LoginPage() {
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Login failed");
       toast.success("Signed in successfully!");
-      router.push("/dashboard");
+      if (redirectTo) router.push(redirectTo);
+      else router.back();
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Invalid email or password.");
     } finally {
@@ -77,7 +80,7 @@ export default function LoginPage() {
             {l?.subtitle ?? "Sign in to your account to continue."}
           </p>
 
-          <GoogleButton redirectTo="/dashboard" />
+          <GoogleButton redirectTo={redirectTo || (typeof window !== "undefined" ? document.referrer || "/dashboard" : "/dashboard")} />
 
           <div className="flex items-center gap-3">
             <div className="h-px flex-1 bg-border" />
@@ -140,7 +143,7 @@ export default function LoginPage() {
 
           <p className="mt-5 text-center text-sm text-muted-foreground">
             {l?.noAccount ?? "Don't have an account?"}{" "}
-            <Link href="/signup" className="font-medium text-primary hover:underline">
+            <Link href={redirectTo ? `/signup?redirect=${encodeURIComponent(redirectTo)}` : "/signup"} className="font-medium text-primary hover:underline">
               {l?.signUpFree ?? "Sign up free"}
             </Link>
           </p>
@@ -151,7 +154,6 @@ export default function LoginPage() {
           </div>
         </div>
       </div>
-
       <div className="hidden flex-col items-center justify-center gradient-primary p-12 text-white lg:flex lg:w-2/5">
         <div className="max-w-xs text-center">
           <div className="mb-6 flex justify-center">
@@ -174,5 +176,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginPageInner />
+    </Suspense>
   );
 }

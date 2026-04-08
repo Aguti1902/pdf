@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
@@ -22,10 +22,12 @@ import { SITE } from "@/config/seo";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { GoogleButton } from "@/components/auth/GoogleButton";
 
-export default function SignUpPage() {
+function SignUpPageInner() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get("redirect") ?? "";
   const { t, messages } = useLanguage();
   const s = messages ? t("signup") : null;
 
@@ -52,7 +54,8 @@ export default function SignUpPage() {
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Registration failed");
       toast.success(`Welcome to ${SITE.name}!`);
-      router.push("/dashboard");
+      if (redirectTo) router.push(redirectTo);
+      else router.back();
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Something went wrong.");
     } finally {
@@ -84,7 +87,7 @@ export default function SignUpPage() {
             ))}
           </ul>
 
-          <GoogleButton redirectTo="/dashboard" label={s?.createBtn ? "Continue with Google" : "Continue with Google"} />
+          <GoogleButton redirectTo={redirectTo || (typeof window !== "undefined" ? document.referrer || "/dashboard" : "/dashboard")} label="Continue with Google" />
 
           <div className="flex items-center gap-3">
             <div className="h-px flex-1 bg-border" />
@@ -162,7 +165,7 @@ export default function SignUpPage() {
 
           <p className="mt-5 text-center text-sm text-muted-foreground">
             {s?.alreadyHave ?? "Already have an account?"}{" "}
-            <Link href="/login" className="font-medium text-primary hover:underline">
+            <Link href={redirectTo ? `/login?redirect=${encodeURIComponent(redirectTo)}` : "/login"} className="font-medium text-primary hover:underline">
               {s?.signInLink ?? "Sign in"}
             </Link>
           </p>
@@ -188,5 +191,13 @@ export default function SignUpPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SignUpPage() {
+  return (
+    <Suspense>
+      <SignUpPageInner />
+    </Suspense>
   );
 }

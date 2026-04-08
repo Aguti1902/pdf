@@ -74,7 +74,7 @@ export function AuthModal({ open, onClose, onSuccess, googleRedirectTo, onBefore
         <div className="p-6 space-y-4">
           {/* Google */}
           <GoogleButton
-            redirectTo={googleRedirectTo ?? "/dashboard"}
+            redirectTo={googleRedirectTo ?? (typeof window !== "undefined" ? window.location.pathname + window.location.search : "/dashboard")}
             onBeforeNavigate={onBeforeGoogleNavigate}
           />
 
