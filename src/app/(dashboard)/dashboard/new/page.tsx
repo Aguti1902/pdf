@@ -21,6 +21,7 @@ const ICON_MAP: Record<string, React.ElementType> = {
   FileText, ImageDown, FilePlus, TableProperties, Presentation,
 };
 
+// Tool hrefs use /{slug} directly (no /tools/ prefix)
 const ALL_TOOLS = [
   {
     category: "Editar y anotar",
@@ -163,7 +164,7 @@ export default function NewDocumentPage() {
                   return (
                     <Link
                       key={tool.slug}
-                      href={tool.comingSoon ? "#" : `/tools/${tool.slug}`}
+                      href={tool.comingSoon ? "#" : `/${tool.slug}`}
                       className={`relative flex items-center gap-3 rounded-xl border border-neutral-200 bg-white p-4 transition-all ${
                         tool.comingSoon
                           ? "opacity-50 cursor-default"

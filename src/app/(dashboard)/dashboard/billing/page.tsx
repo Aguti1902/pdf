@@ -33,11 +33,12 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; dot: string 
 };
 
 export default function BillingPage() {
-  const [user,        setUser]        = useState<UserData | null>(null);
-  const [loading,     setLoading]     = useState(true);
-  const [canceling,   setCanceling]   = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
-  const [cancelAtEnd, setCancelAtEnd] = useState(false);
+  const [user,           setUser]           = useState<UserData | null>(null);
+  const [loading,        setLoading]        = useState(true);
+  const [canceling,      setCanceling]      = useState(false);
+  const [showConfirm,    setShowConfirm]    = useState(false);
+  const [cancelAtEnd,    setCancelAtEnd]    = useState(false);
+  const [updatingCard,   setUpdatingCard]   = useState(false);
   const { t, messages } = useLanguage();
   const d = messages ? t("dashboard") : null;
 
@@ -59,7 +60,13 @@ export default function BillingPage() {
   const sub    = user?.subscription;
   const status = (sub?.status ?? "free") as keyof typeof STATUS_CONFIG;
   const cfg    = STATUS_CONFIG[status] ?? STATUS_CONFIG.free;
-  const isPremium = status === "active" || status === "trialing";
+
+  const trialExpired  = sub?.trialEnd              ? new Date(sub.trialEnd).getTime()              < Date.now() : false;
+  const periodExpired = sub?.stripeCurrentPeriodEnd ? new Date(sub.stripeCurrentPeriodEnd).getTime() < Date.now() : false;
+
+  const isPremium =
+    (status === "trialing" && !trialExpired) ||
+    (status === "active"   && !periodExpired);
 
   const fmt = (iso: string | null | undefined) =>
     iso ? new Date(iso).toLocaleDateString("es-ES", { day: "2-digit", month: "long", year: "numeric" }) : null;
@@ -69,6 +76,28 @@ export default function BillingPage() {
   const trialDaysLeft = sub?.trialEnd
     ? Math.max(0, Math.ceil((new Date(sub.trialEnd).getTime() - Date.now()) / 86400000))
     : null;
+
+  const handleUpdateCard = async () => {
+    if (!user?.stripeCustomerId) {
+      toast.error("No se encontró el cliente de Stripe.");
+      return;
+    }
+    setUpdatingCard(true);
+    try {
+      const res = await fetch("/api/stripe/create-portal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ customerId: user.stripeCustomerId }),
+      });
+      const data = await res.json();
+      if (data?.url) window.open(data.url, "_blank");
+      else toast.error("No se pudo abrir el portal de pago.");
+    } catch {
+      toast.error("Error al conectar con Stripe.");
+    } finally {
+      setUpdatingCard(false);
+    }
+  };
 
   const handleCancelAction = async (action: "cancel" | "reactivate") => {
     setCanceling(true);
@@ -253,15 +282,25 @@ export default function BillingPage() {
                   <h3 className="text-sm font-semibold text-neutral-700 mb-4 flex items-center gap-2">
                     <CreditCard className="h-4 w-4" /> {d?.paymentMethod ?? "Método de pago"}
                   </h3>
-                  <div className="flex items-center gap-4">
-                    <div className="flex h-10 w-16 items-center justify-center rounded-lg border border-neutral-200 bg-neutral-50">
-                      <CreditCard className="h-5 w-5 text-neutral-400" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-neutral-900">•••• •••• •••• ••••</p>
-                      <p className="text-xs text-neutral-400 mt-0.5">Tarjeta guardada de forma segura</p>
-                    </div>
-                  </div>
+              <div className="flex items-center gap-4">
+                <div className="flex h-10 w-16 items-center justify-center rounded-lg border border-neutral-200 bg-neutral-50">
+                  <CreditCard className="h-5 w-5 text-neutral-400" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-neutral-900">•••• •••• •••• ••••</p>
+                  <p className="text-xs text-neutral-400 mt-0.5">Tarjeta guardada de forma segura</p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs rounded-md gap-1.5"
+                  onClick={handleUpdateCard}
+                  disabled={updatingCard}
+                >
+                  {updatingCard ? <Loader2 className="h-3 w-3 animate-spin" /> : <CreditCard className="h-3 w-3" />}
+                  Actualizar tarjeta
+                </Button>
+              </div>
                 </div>
               )}
             </div>

@@ -74,11 +74,23 @@ export default function DashboardPage() {
   const deleteFolder = (id: string) => saveFolders(folders.filter(f => f.id !== id));
 
   const subStatus = user?.subscription?.status;
-  const isPremium = subStatus === "active" || subStatus === "trialing";
 
   const trialEnd = user?.subscription?.trialEnd
     ? new Date(user.subscription.trialEnd)
     : null;
+  const periodEnd = user?.subscription?.stripeCurrentPeriodEnd
+    ? new Date(user.subscription.stripeCurrentPeriodEnd)
+    : null;
+
+  // Trial is only valid while trialEnd is in the future
+  const trialExpired = trialEnd ? trialEnd.getTime() < Date.now() : false;
+  // Active subscription is only valid while current period hasn't ended
+  const periodExpired = periodEnd ? periodEnd.getTime() < Date.now() : false;
+
+  const isPremium =
+    (subStatus === "trialing" && !trialExpired) ||
+    (subStatus === "active"   && !periodExpired);
+
   const daysLeft = trialEnd
     ? Math.max(0, Math.ceil((trialEnd.getTime() - Date.now()) / 86400000))
     : null;
