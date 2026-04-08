@@ -6,6 +6,8 @@ import Link from "next/link";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { PRICING, CURRENCIES, DEFAULT_CURRENCY, type CurrencyCode } from "@/config/pricing";
 import { CurrencySelector } from "@/components/checkout/CurrencySelector";
+import { AuthModal }    from "@/components/auth/AuthModal";
+import { PaywallModal } from "@/components/checkout/PaywallModal";
 
 function FaqItem({ question, answer }: { question: string; answer: string }) {
   const [open, setOpen] = useState(false);
@@ -44,8 +46,12 @@ const LOCALE_CURRENCY: Record<string, CurrencyCode> = {
 export default function PricingPage() {
   const { t, messages, locale } = useLanguage();
   const p = messages ? t("pricingPage") : null;
-  const [currency, setCurrency] = useState<CurrencyCode>(DEFAULT_CURRENCY);
-  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [currency,       setCurrency]       = useState<CurrencyCode>(DEFAULT_CURRENCY);
+  const [checkoutLoading,setCheckoutLoading]= useState(false);
+  const [showAuth,       setShowAuth]       = useState(false);
+  const [showPaywall,    setShowPaywall]    = useState(false);
+  const [userEmail,      setUserEmail]      = useState("");
+  const [userName,       setUserName]       = useState("");
   const curr = CURRENCIES[currency];
 
   // Set default currency based on locale
@@ -56,17 +62,43 @@ export default function PricingPage() {
   const handleCheckout = async () => {
     setCheckoutLoading(true);
     try {
-      const res = await fetch("/api/stripe/create-checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ currency }),
-      });
-      if (!res.ok) throw new Error();
-      const { url } = await res.json();
-      if (url) window.location.href = url;
-    } catch {
+      // Check if user is already logged in
+      const res = await fetch("/api/auth/me");
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.user) {
+          // Already logged in — check if already subscribed
+          const subRes = await fetch("/api/subscription");
+          const sub = subRes.ok ? await subRes.json() : {};
+          if (sub.isPremium) {
+            window.location.href = "/dashboard";
+            return;
+          }
+          setUserEmail(data.user.email ?? "");
+          setUserName(data.user.name   ?? "");
+          setShowPaywall(true);
+          return;
+        }
+      }
+      // Not logged in → show auth modal
+      setShowAuth(true);
+    } finally {
       setCheckoutLoading(false);
     }
+  };
+
+  const handleAuthSuccess = async () => {
+    setShowAuth(false);
+    // After login, fetch user data then show paywall
+    try {
+      const res = await fetch("/api/auth/me");
+      if (res.ok) {
+        const data = await res.json();
+        setUserEmail(data.user?.email ?? "");
+        setUserName(data.user?.name   ?? "");
+      }
+    } catch { /* ignore */ }
+    setShowPaywall(true);
   };
 
   const tableRows = [
@@ -251,6 +283,20 @@ export default function PricingPage() {
           </div>
         </div>
       </section>
+
+      {/* Auth → Paywall flow */}
+      <AuthModal
+        open={showAuth}
+        onClose={() => setShowAuth(false)}
+        onSuccess={handleAuthSuccess}
+      />
+      <PaywallModal
+        open={showPaywall}
+        onClose={() => setShowPaywall(false)}
+        userEmail={userEmail}
+        userName={userName}
+        toolName="PDFCraft Premium"
+      />
     </div>
   );
 }
