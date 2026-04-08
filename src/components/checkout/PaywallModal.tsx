@@ -63,8 +63,7 @@ function CheckoutForm({ clientSecret, customerId, currency, userEmail, onSuccess
   const [agreed,       setAgreed]       = useState(false);
   const [loading,      setLoading]      = useState(false);
   const [error,        setError]        = useState("");
-  const [payReq,       setPayReq]       = useState<PaymentRequest | null>(null);
-  const [activeMethod, setActiveMethod] = useState<"card" | "wallet">("card");
+  const [payReq, setPayReq] = useState<PaymentRequest | null>(null);
 
   const curr = CURRENCIES[currency];
 
@@ -175,64 +174,26 @@ function CheckoutForm({ clientSecret, customerId, currency, userEmail, onSuccess
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
 
-      {/* Payment method tabs — only show wallet tab when available */}
+      {/* ── Official Google Pay / Apple Pay button (rendered by Stripe) ── */}
       {payReq && (
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => setActiveMethod("card")}
-            className={`flex flex-1 items-center justify-center gap-2 rounded-lg border-2 py-2.5 text-sm font-medium transition-all ${
-              activeMethod === "card"
-                ? "border-primary bg-primary/5 text-primary"
-                : "border-border text-muted-foreground hover:border-primary/40"
-            }`}
-          >
-            <CreditCard className="h-4 w-4" />
-            Tarjeta
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveMethod("wallet")}
-            className={`flex flex-1 items-center justify-center gap-2 rounded-lg border-2 py-2.5 text-sm font-medium transition-all ${
-              activeMethod === "wallet"
-                ? "border-primary bg-primary/5 text-primary"
-                : "border-border text-muted-foreground hover:border-primary/40"
-            }`}
-          >
-            <svg className="h-5" viewBox="0 0 41 17" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M19.44 8.49c0 2.37-1.83 4.1-4.08 4.1s-4.08-1.73-4.08-4.1c0-2.39 1.83-4.1 4.08-4.1s4.08 1.71 4.08 4.1zm-1.79 0c0-1.49-1.08-2.5-2.29-2.5s-2.29 1.01-2.29 2.5c0 1.47 1.08 2.5 2.29 2.5s2.29-1.01 2.29-2.5z" fill="#EA4335"/>
-              <path d="M28.17 8.49c0 2.37-1.83 4.1-4.08 4.1s-4.08-1.73-4.08-4.1c0-2.38 1.83-4.1 4.08-4.1s4.08 1.71 4.08 4.1zm-1.79 0c0-1.49-1.08-2.5-2.29-2.5s-2.29 1.01-2.29 2.5c0 1.47 1.08 2.5 2.29 2.5s2.29-1.01 2.29-2.5z" fill="#FBBC05"/>
-              <path d="M36.65 4.63v7.48c0 3.07-1.81 4.33-3.95 4.33-2.02 0-3.23-1.35-3.69-2.46l1.56-.65c.28.68.97 1.48 2.13 1.48 1.39 0 2.26-.86 2.26-2.48v-.61h-.06c-.42.52-1.22.97-2.23.97-2.12 0-4.06-1.85-4.06-4.22 0-2.39 1.94-4.18 4.06-4.18 1.01 0 1.81.44 2.23.94h.06v-.6h1.69zm-1.56 3.88c0-1.49-.99-2.57-2.26-2.57-1.28 0-2.36 1.08-2.36 2.57 0 1.47 1.08 2.52 2.36 2.52 1.27 0 2.26-1.05 2.26-2.52z" fill="#4285F4"/>
-              <path d="M39.67.96v11.55h-1.78V.96h1.78z" fill="#34A853"/>
-              <path d="M6.48 7.6V5.92h5.84c.06.3.09.65.09 1.03 0 1.28-.35 2.86-1.48 3.99-1.1 1.14-2.5 1.74-4.44 1.74C2.87 12.68 0 9.87 0 6.25S2.87-.17 6.49-.17c1.99 0 3.41.78 4.47 1.79L9.7 2.87c-.76-.71-1.79-1.27-3.21-1.27-2.62 0-4.68 2.11-4.68 4.73 0 2.62 2.06 4.73 4.68 4.73 1.7 0 2.67-.68 3.29-1.3.5-.5.84-1.23.97-2.22H6.48z" fill="#4285F4"/>
-            </svg>
-            Google Pay
-          </button>
-        </div>
-      )}
-
-      {/* ── Wallet (Google Pay / Apple Pay) ─────────────────────────── */}
-      {activeMethod === "wallet" && payReq ? (
         <>
-          <p className="text-center text-xs text-muted-foreground">
-            Acepta una prueba de {PRICING.trial.days} días ({curr.trialLabel}), luego {curr.monthlyLabel}/mes.
-            Puedes cancelar cuando quieras.
-          </p>
           <PaymentRequestButtonElement
-            options={{ paymentRequest: payReq, style: { paymentRequestButton: { height: "52px", theme: "dark" } } }}
+            options={{
+              paymentRequest: payReq,
+              style: { paymentRequestButton: { height: "48px", theme: "dark", type: "buy" } },
+            }}
           />
-          {error && (
-            <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600 dark:bg-red-900/20 dark:text-red-400">
-              {error}
-            </p>
-          )}
-          <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
-            <ShieldCheck className="h-3.5 w-3.5 text-green-500" />
-            Pago seguro SSL · Cancela cuando quieras
+          {/* Divider */}
+          <div className="flex items-center gap-3">
+            <div className="h-px flex-1 bg-border" />
+            <span className="text-xs text-muted-foreground">o paga con tarjeta</span>
+            <div className="h-px flex-1 bg-border" />
           </div>
         </>
-      ) : (
-        <>
+      )}
+
+      {/* ── Card form ─────────────────────────────────────────────────── */}
+      <>
           {/* Card number */}
           <div>
             <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
@@ -325,8 +286,7 @@ function CheckoutForm({ clientSecret, customerId, currency, userEmail, onSuccess
             <ShieldCheck className="h-3.5 w-3.5 text-green-500" />
             Pago seguro SSL · Cancela cuando quieras
           </div>
-        </>
-      )}
+      </>
     </form>
   );
 }
