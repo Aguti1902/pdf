@@ -105,9 +105,10 @@ export function EditorLayout() {
   const [showAuth,      setShowAuth]      = useState(false);
   const [showPaywall,   setShowPaywall]   = useState(false);
   const [showSignModal, setShowSignModal] = useState(false);
-  const [userEmail,     setUserEmail]     = useState("");
-  const [userName,      setUserName]      = useState("");
-  const [isPremiumReal, setIsPremiumReal] = useState(false);
+  const [userEmail,       setUserEmail]       = useState("");
+  const [userName,        setUserName]        = useState("");
+  const [isPremiumReal,   setIsPremiumReal]   = useState(false);
+  const [hadSubscription, setHadSubscription] = useState(false);
   const [pendingAction, setPendingAction] = useState<"save" | "download" | null>(null);
   const [docId,         setDocId]         = useState<string | null>(null);
   const [isSaving,      setIsSaving]      = useState(false);
@@ -140,6 +141,7 @@ export function EditorLayout() {
       if (res.ok) {
         const data = await res.json();
         setIsPremiumReal(data.isPremium === true);
+        if (data.hadSubscription) setHadSubscription(true);
       }
     } catch { /* offline */ }
   }, []);
@@ -753,6 +755,7 @@ export function EditorLayout() {
         toolName="Download PDF"
         userEmail={userEmail}
         userName={userName}
+        hadSubscription={hadSubscription}
         onPaymentSuccess={() => { setShowPaywall(false); doExportDownload(); }}
       />
       {showSignModal && <SignatureModal onConfirm={handleSignaturePlaced} onClose={() => setShowSignModal(false)} />}

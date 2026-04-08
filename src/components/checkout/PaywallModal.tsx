@@ -366,9 +366,11 @@ interface PaywallModalProps {
   onPaymentSuccess?: () => void;
   /** When true, close the modal instead of redirecting to dashboard after payment (for conversion tools) */
   noRedirect?: boolean;
+  /** True when the user previously had a subscription (trial expired / canceled) */
+  hadSubscription?: boolean;
 }
 
-export function PaywallModal({ open, onClose, toolName, userEmail, userName, onPaymentSuccess, noRedirect }: PaywallModalProps) {
+export function PaywallModal({ open, onClose, toolName, userEmail, userName, onPaymentSuccess, noRedirect, hadSubscription }: PaywallModalProps) {
   const { locale } = useLanguage();
   const defaultCurrency: CurrencyCode = LOCALE_CURRENCY[locale] ?? DEFAULT_CURRENCY;
 
@@ -481,8 +483,17 @@ export function PaywallModal({ open, onClose, toolName, userEmail, userName, onP
             {/* Header */}
             <div className="flex items-center justify-between border-b border-border px-6 py-4">
               <div>
-                <p className="text-xs text-muted-foreground">Tu documento está listo</p>
-                <p className="text-base font-bold leading-tight">Inicia tu suscripción para acceder</p>
+                {hadSubscription ? (
+                  <>
+                    <p className="text-xs text-amber-600 font-medium">Tu período de acceso ha finalizado</p>
+                    <p className="text-base font-bold leading-tight">Reactiva tu suscripción para continuar</p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-xs text-muted-foreground">Tu documento está listo</p>
+                    <p className="text-base font-bold leading-tight">Inicia tu suscripción para acceder</p>
+                  </>
+                )}
               </div>
               <button
                 onClick={onClose}
@@ -497,11 +508,15 @@ export function PaywallModal({ open, onClose, toolName, userEmail, userName, onP
               <div>
                 <p className="text-sm font-semibold text-foreground">Total hoy</p>
                 <p className="text-xs text-muted-foreground">
-                  Prueba {PRICING.trial.days} días, luego {curr.monthlyLabel}/mes
+                  {hadSubscription
+                    ? `Suscripción mensual · ${curr.monthlyLabel}/mes`
+                    : `Prueba ${PRICING.trial.days} días, luego ${curr.monthlyLabel}/mes`}
                 </p>
               </div>
               <div className="flex items-center gap-3">
-                <span className="text-2xl font-extrabold">{curr.trialLabel}</span>
+                <span className="text-2xl font-extrabold">
+                  {hadSubscription ? curr.monthlyLabel : curr.trialLabel}
+                </span>
                 <CurrencySelector value={currency} onChange={handleCurrencyChange} />
               </div>
             </div>

@@ -17,21 +17,23 @@ interface Props {
  * - After payment, downloads the pending file before redirecting to dashboard.
  */
 export function DownloadGateModals({ gate, toolName }: Props) {
-  const [userEmail, setUserEmail] = useState<string>("");
-  const [userName,  setUserName]  = useState<string>("");
+  const [userEmail,       setUserEmail]       = useState<string>("");
+  const [userName,        setUserName]        = useState<string>("");
+  const [hadSubscription, setHadSubscription] = useState(false);
 
-  // Fetch current user whenever the paywall (or auth) step becomes active
+  // Fetch user + subscription status whenever the modal becomes active
   useEffect(() => {
     if (gate.step === "idle") return;
-    fetch("/api/auth/me")
-      .then(r => r.ok ? r.json() : null)
-      .then(data => {
-        if (data?.user) {
-          setUserEmail(data.user.email ?? "");
-          setUserName(data.user.name  ?? "");
-        }
-      })
-      .catch(() => {});
+    Promise.all([
+      fetch("/api/auth/me").then(r => r.ok ? r.json() : null),
+      fetch("/api/subscription").then(r => r.ok ? r.json() : null),
+    ]).then(([meData, subData]) => {
+      if (meData?.user) {
+        setUserEmail(meData.user.email ?? "");
+        setUserName(meData.user.name   ?? "");
+      }
+      if (subData?.hadSubscription) setHadSubscription(true);
+    }).catch(() => {});
   }, [gate.step]);
 
   /** Called right after Stripe confirms payment — triggers the download before the success redirect */
@@ -57,6 +59,7 @@ export function DownloadGateModals({ gate, toolName }: Props) {
         userName={userName}
         onPaymentSuccess={handlePaymentSuccess}
         noRedirect
+        hadSubscription={hadSubscription}
       />
     </>
   );
