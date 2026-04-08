@@ -125,8 +125,13 @@ export function EditorLayout() {
   const fileInputRef    = useRef<HTMLInputElement>(null);
   const imageInputRef   = useRef<HTMLInputElement>(null);
   const pendingImagePos = useRef<{x:number;y:number} | null>(null);
+  // Always-current page number, safe to read inside any callback without stale-closure issues
+  const currentPageRef  = useRef(editorState.currentPage);
 
   const isPremium = isPremiumReal;
+
+  // Keep currentPageRef always up-to-date so callbacks don't have stale page values
+  useEffect(() => { currentPageRef.current = editorState.currentPage; }, [editorState.currentPage]);
 
   // Check subscription status on mount
   const checkSubscription = useCallback(async () => {
@@ -242,14 +247,14 @@ export function EditorLayout() {
 
   // ── History ──────────────────────────────────────────────────────────────────
   const commit = useCallback((next: Annotation[], selectId?: string) => {
-    // Stamp annotations that don't yet have a page with the current page number
-    const currentPage = editorState.currentPage;
-    const stamped = next.map(ann => ann.page !== undefined ? ann : { ...ann, page: currentPage });
+    // Stamp annotations that don't yet have a page with the current page number (via ref — always fresh)
+    const pg = currentPageRef.current;
+    const stamped = next.map(ann => ann.page !== undefined ? ann : { ...ann, page: pg });
     setAnnotations(stamped);
     setHistory(h => [...h.slice(0, historyIdx + 1), stamped]);
     setHistoryIdx(i => i + 1);
     if (selectId !== undefined) { setSelectedId(selectId); setActiveTool("pointer"); }
-  }, [historyIdx, setActiveTool, editorState.currentPage]);
+  }, [historyIdx, setActiveTool]);
 
   const undo = () => {
     if (historyIdx === 0) return;
@@ -300,8 +305,7 @@ export function EditorLayout() {
     }
     if (tool === "add-text") {
       const id = crypto.randomUUID();
-      const currentPage = editorState.currentPage;
-      setTextBoxes(prev => [...prev, { id, x, y, value: "", color: toolColor, placeholder: "Type here...", page: currentPage }]);
+      setTextBoxes(prev => [...prev, { id, x, y, value: "", color: toolColor, placeholder: "Type here...", page: currentPageRef.current }]);
       setActiveTool("pointer");
     }
     if (tool === "add-image") { pendingImagePos.current = { x, y }; imageInputRef.current?.click(); }
@@ -655,8 +659,8 @@ export function EditorLayout() {
                   page={editorState.currentPage}
                   zoom={editorState.zoom}
                   pageRotation={pageRotation}
-                  annotations={annotations.filter(a => (a.page ?? editorState.currentPage) === editorState.currentPage)}
-                  textBoxes={textBoxes.filter(tb => (tb.page ?? editorState.currentPage) === editorState.currentPage)}
+                  annotations={annotations.filter(a => !a.page || a.page === editorState.currentPage)}
+                  textBoxes={textBoxes.filter(tb => !tb.page || tb.page === editorState.currentPage)}
                   selectedId={selectedId}
                   cursor={cursor}
                   liveStroke={liveStroke}
