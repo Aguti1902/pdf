@@ -67,31 +67,35 @@ function CheckoutForm({ clientSecret, customerId, currency, userEmail, onSuccess
 
   const curr = CURRENCIES[currency];
 
-  /* ── Helper: activate subscription after successful payment ───────── */
-  const activateSubscription = useCallback(async (pmId: string, piId: string) => {
+  /* ── Helper: activate subscription after card is saved ─────────────── */
+  const activateSubscription = useCallback(async (pmId: string, siId: string) => {
     try {
       const res = await fetch("/api/stripe/activate-subscription", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ customerId, paymentMethodId: pmId, paymentIntentId: piId, currency }),
+        body:    JSON.stringify({ customerId, paymentMethodId: pmId, setupIntentId: siId, currency }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       onSuccess();
     } catch (err) {
       console.error(err);
-      toast.info("Pago procesado. Activando acceso…");
+      toast.info("Tarjeta guardada. Activando acceso…");
       onSuccess();
     }
   }, [customerId, currency, onSuccess]);
 
-  /* ── Google Pay / Apple Pay ────────────────────────────────────────── */
+  /* ── Google Pay / Apple Pay — shows monthly amount (what they'll pay after trial) ── */
   useEffect(() => {
     if (!stripe) return;
     const pr = stripe.paymentRequest({
       country:           "ES",
       currency:          currency.toLowerCase(),
-      total:             { label: `PDFCraft — ${PRICING.trial.days}-Day Trial`, amount: Math.round(curr.trialAmount * 100) },
+      total:             { label: `PDFCraft Premium — después del trial`, amount: Math.round(curr.monthlyAmount * 100) },
+      displayItems: [
+        { label: `Trial gratuito (${PRICING.trial.days} días)`, amount: 0 },
+        { label: `Suscripción mensual (tras el trial)`,         amount: Math.round(curr.monthlyAmount * 100) },
+      ],
       requestPayerName:  true,
       requestPayerEmail: true,
     });
@@ -99,15 +103,15 @@ function CheckoutForm({ clientSecret, customerId, currency, userEmail, onSuccess
       if (result) setPayReq(pr);
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stripe, currency, curr.trialAmount]);
+  }, [stripe, currency, curr.monthlyAmount]);
 
-  /* ── Google Pay paymentmethod event handler ───────────────────────── */
+  /* ── Google Pay / Apple Pay — confirm SetupIntent (no charge now) ─── */
   useEffect(() => {
     if (!payReq || !stripe) return;
 
     const handler = async (ev: PaymentRequestPaymentMethodEvent) => {
-      // Confirm the PaymentIntent with the wallet payment method
-      const { paymentIntent, error: confirmError } = await stripe.confirmCardPayment(
+      // Confirm the SetupIntent with the wallet payment method (saves card, no charge)
+      const { setupIntent, error: confirmError } = await stripe.confirmCardSetup(
         clientSecret,
         { payment_method: ev.paymentMethod.id },
         { handleActions: false },
@@ -115,19 +119,18 @@ function CheckoutForm({ clientSecret, customerId, currency, userEmail, onSuccess
 
       if (confirmError) {
         ev.complete("fail");
-        setError(confirmError.message ?? "El pago no pudo procesarse.");
+        setError(confirmError.message ?? "No se pudo guardar el método de pago.");
         return;
       }
 
       ev.complete("success");
 
-      // Handle 3DS / additional actions if required
-      if (paymentIntent?.status === "requires_action") {
-        const { error: actionError, paymentIntent: pi2 } = await stripe.confirmCardPayment(clientSecret);
+      if (setupIntent?.status === "requires_action") {
+        const { error: actionError, setupIntent: si2 } = await stripe.confirmCardSetup(clientSecret);
         if (actionError) { setError(actionError.message ?? "Autenticación fallida."); return; }
-        if (pi2?.payment_method) await activateSubscription(pi2.payment_method as string, pi2.id);
-      } else if (paymentIntent?.status === "succeeded" && paymentIntent.payment_method) {
-        await activateSubscription(paymentIntent.payment_method as string, paymentIntent.id);
+        if (si2?.payment_method) await activateSubscription(si2.payment_method as string, si2.id);
+      } else if (setupIntent?.status === "succeeded" && setupIntent.payment_method) {
+        await activateSubscription(setupIntent.payment_method as string, setupIntent.id);
       }
     };
 
@@ -135,7 +138,7 @@ function CheckoutForm({ clientSecret, customerId, currency, userEmail, onSuccess
     return () => { payReq.off("paymentmethod", handler); };
   }, [payReq, stripe, clientSecret, activateSubscription]);
 
-  /* ── Card submit ──────────────────────────────────────────────────── */
+  /* ── Card submit — confirm SetupIntent (saves card, no charge now) ── */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!stripe || !elements) return;
@@ -148,26 +151,26 @@ function CheckoutForm({ clientSecret, customerId, currency, userEmail, onSuccess
     const cardNumber = elements.getElement(CardNumberElement);
     if (!cardNumber) { setLoading(false); return; }
 
-    const { paymentIntent, error: piError } = await stripe.confirmCardPayment(clientSecret, {
+    const { setupIntent, error: siError } = await stripe.confirmCardSetup(clientSecret, {
       payment_method: {
         card:            cardNumber,
         billing_details: { name: cardName, email: userEmail },
       },
     });
 
-    if (piError) {
-      setError(piError.message ?? "El pago no pudo procesarse.");
+    if (siError) {
+      setError(siError.message ?? "No se pudo guardar la tarjeta.");
       setLoading(false);
       return;
     }
 
-    if (paymentIntent?.status !== "succeeded") {
-      setError("El pago no se completó. Inténtalo de nuevo.");
+    if (setupIntent?.status !== "succeeded") {
+      setError("No se completó el registro de la tarjeta. Inténtalo de nuevo.");
       setLoading(false);
       return;
     }
 
-    await activateSubscription(paymentIntent.payment_method as string, paymentIntent.id);
+    await activateSubscription(setupIntent.payment_method as string, setupIntent.id);
     setLoading(false);
   };
 
@@ -256,9 +259,9 @@ function CheckoutForm({ clientSecret, customerId, currency, userEmail, onSuccess
               className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-primary"
             />
             <span className="text-[11px] leading-relaxed text-muted-foreground">
-              Al marcar esta casilla, aceptas una prueba de {PRICING.trial.days} días ({curr.trialLabel}) y
-              una suscripción mensual posterior de {curr.monthlyLabel}. Autorizas los cargos recurrentes y
-              puedes cancelar en cualquier momento.{" "}
+              Al marcar esta casilla, aceptas una prueba gratuita de {PRICING.trial.days} días sin cargo hoy.
+                   Tras el trial, tu suscripción se renueva a {curr.monthlyLabel}/mes. Autorizas los cargos recurrentes y
+                   puedes cancelar en cualquier momento antes del final del trial.{" "}
               <Link href="/legal/subscription" className="text-primary underline" target="_blank">
                 Términos
               </Link>{" "}
@@ -278,7 +281,7 @@ function CheckoutForm({ clientSecret, customerId, currency, userEmail, onSuccess
             {loading ? (
               <><Loader2 className="h-4 w-4 animate-spin" /> Procesando…</>
             ) : (
-              <><Lock className="h-4 w-4" /> Comenzar prueba</>
+              <><Lock className="h-4 w-4" /> Empezar prueba gratis</>
             )}
           </button>
 
@@ -470,13 +473,20 @@ export function PaywallModal({ open, onClose, toolName, userEmail, userName, onP
                 <p className="text-xs text-muted-foreground">
                   {hadSubscription
                     ? `Suscripción mensual · ${curr.monthlyLabel}/mes`
-                    : `Prueba ${PRICING.trial.days} días, luego ${curr.monthlyLabel}/mes`}
+                    : `Trial ${PRICING.trial.days} días gratis, luego ${curr.monthlyLabel}/mes`}
                 </p>
               </div>
               <div className="flex items-center gap-3">
-                <span className="text-2xl font-extrabold">
-                  {hadSubscription ? curr.monthlyLabel : curr.trialLabel}
-                </span>
+                {hadSubscription ? (
+                  <span className="text-2xl font-extrabold">{curr.monthlyLabel}</span>
+                ) : (
+                  <div className="flex flex-col items-end">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-2xl font-extrabold text-green-600">GRATIS</span>
+                    </div>
+                    <span className="text-[10px] text-muted-foreground">luego {curr.monthlyLabel}/mes</span>
+                  </div>
+                )}
                 <CurrencySelector value={currency} onChange={handleCurrencyChange} />
               </div>
             </div>

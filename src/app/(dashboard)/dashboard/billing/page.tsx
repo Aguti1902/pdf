@@ -337,7 +337,7 @@ export default function BillingPage() {
                 <div className="space-y-2 text-xs text-neutral-500 leading-relaxed">
                   <div className="flex items-start gap-2">
                     <CheckCircle2 className="h-3.5 w-3.5 text-neutral-400 mt-0.5 shrink-0" />
-                    <span>Tu trial cuesta <strong className="text-neutral-700">0,50 €</strong> y da 2 días de acceso completo.</span>
+                    <span>Tu trial es <strong className="text-neutral-700">gratuito</strong> y da {PRICING.trial.days} días de acceso completo. Solo necesitas añadir un método de pago.</span>
                   </div>
                   <div className="flex items-start gap-2">
                     <RefreshCw className="h-3.5 w-3.5 text-neutral-400 mt-0.5 shrink-0" />

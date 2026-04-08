@@ -1,23 +1,21 @@
 // ─── Multi-currency pricing ──────────────────────────────────────────────────
-// Amounts in the currency's major unit (e.g. EUR cents → 0.50 → 50 on Stripe)
-// All trial amounts are real-value equivalents of €0.50.
-// All monthly amounts are real-value equivalents of €49.90.
-// Amounts verified against Stripe's minimum charge requirements (account settles in EUR).
+// Trial is FREE (€0) — card is required to start, subscription charges after trial.
+// Monthly amounts are real-value equivalents of €49.90.
 export const CURRENCIES = {
-  EUR: { symbol: "€",   flag: "🇪🇺", trialAmount: 0.50,  monthlyAmount: 49.90,
-         trialLabel: "0,50 €",    monthlyLabel: "49,90 €"   },
-  USD: { symbol: "$",   flag: "🇺🇸", trialAmount: 0.59,  monthlyAmount: 53.90,
-         trialLabel: "$0.59",     monthlyLabel: "$53.90"    },
-  GBP: { symbol: "£",   flag: "🇬🇧", trialAmount: 0.45,  monthlyAmount: 42.90,
-         trialLabel: "£0.45",     monthlyLabel: "£42.90"    },
-  BRL: { symbol: "R$",  flag: "🇧🇷", trialAmount: 2.99,  monthlyAmount: 299.90,
-         trialLabel: "R$2,99",    monthlyLabel: "R$299,90"  },
-  MXN: { symbol: "$",   flag: "🇲🇽", trialAmount: 11.00, monthlyAmount: 1099.00,
-         trialLabel: "$11 MXN",   monthlyLabel: "$1.099 MXN" },
-  CAD: { symbol: "CA$", flag: "🇨🇦", trialAmount: 0.80,  monthlyAmount: 79.90,
-         trialLabel: "CA$0.80",   monthlyLabel: "CA$79.90"  },
-  AUD: { symbol: "A$",  flag: "🇦🇺", trialAmount: 0.85,  monthlyAmount: 84.90,
-         trialLabel: "A$0.85",    monthlyLabel: "A$84.90"   },
+  EUR: { symbol: "€",   flag: "🇪🇺", trialAmount: 0,  monthlyAmount: 49.90,
+         trialLabel: "GRATIS",     monthlyLabel: "49,90 €"   },
+  USD: { symbol: "$",   flag: "🇺🇸", trialAmount: 0,  monthlyAmount: 53.90,
+         trialLabel: "FREE",       monthlyLabel: "$53.90"    },
+  GBP: { symbol: "£",   flag: "🇬🇧", trialAmount: 0,  monthlyAmount: 42.90,
+         trialLabel: "FREE",       monthlyLabel: "£42.90"    },
+  BRL: { symbol: "R$",  flag: "🇧🇷", trialAmount: 0,  monthlyAmount: 299.90,
+         trialLabel: "GRÁTIS",     monthlyLabel: "R$299,90"  },
+  MXN: { symbol: "$",   flag: "🇲🇽", trialAmount: 0,  monthlyAmount: 1099.00,
+         trialLabel: "GRATIS",     monthlyLabel: "$1.099 MXN" },
+  CAD: { symbol: "CA$", flag: "🇨🇦", trialAmount: 0,  monthlyAmount: 79.90,
+         trialLabel: "FREE",       monthlyLabel: "CA$79.90"  },
+  AUD: { symbol: "A$",  flag: "🇦🇺", trialAmount: 0,  monthlyAmount: 84.90,
+         trialLabel: "FREE",       monthlyLabel: "A$84.90"   },
 } as const;
 
 export type CurrencyCode = keyof typeof CURRENCIES;
@@ -26,9 +24,9 @@ export const DEFAULT_CURRENCY: CurrencyCode = "EUR";
 // ─── Legacy PRICING (kept for backwards compat) ───────────────────────────────
 export const PRICING = {
   trial: {
-    price:    CURRENCIES.EUR.trialAmount,
+    price:    0,
     currency: "EUR",
-    label:    CURRENCIES.EUR.trialLabel,
+    label:    "GRATIS",
     days:     2,
     stripePriceId: process.env.NEXT_PUBLIC_STRIPE_TRIAL_FEE_PRICE_ID
       ?? "price_1THbL5JB5YYhafsNwzOUQWfl",
@@ -60,6 +58,6 @@ export const FEATURES = {
 };
 
 export const TRIAL_DISCLOSURE = {
-  summary: `Start your 2-day full access trial for just 0,50 €. After the trial period, your subscription automatically renews at 49,90 €/month until cancelled. Cancel anytime from your account before the trial ends to avoid charges.`,
-  checkoutNotice: `By completing this purchase, you agree to the 2-day trial at 0,50 €, after which your subscription will automatically renews at 49,90 €/month until cancelled.`,
+  summary: `Empieza tu prueba gratuita de 2 días con acceso completo. Tras el período de prueba, tu suscripción se renueva automáticamente a 49,90 €/mes hasta que canceles. Cancela en cualquier momento desde tu cuenta antes de que termine el trial para no recibir cargos.`,
+  checkoutNotice: `Al completar este registro, aceptas la prueba gratuita de 2 días, tras la cual tu suscripción se renueva automáticamente a 49,90 €/mes hasta que canceles.`,
 };

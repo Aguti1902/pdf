@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
   try {
     const { stripe } = await import("@/lib/stripe");
     const body = await req.json();
-    const { customerId, paymentMethodId, currency, paymentIntentId } = body;
+    const { customerId, paymentMethodId, currency, paymentIntentId, setupIntentId } = body;
 
     if (!customerId || !paymentMethodId) {
       return NextResponse.json({ error: "Missing customerId or paymentMethodId" }, { status: 400 });
@@ -48,8 +48,8 @@ export async function POST(req: NextRequest) {
       default_payment_method: paymentMethodId,
       trial_period_days:      PRICING.trial.days,
       metadata: {
-        source:          "web_custom_checkout",
-        paymentIntentId: paymentIntentId ?? "",
+        source:          "web_free_trial",
+        setupIntentId:   setupIntentId   ?? paymentIntentId ?? "",
         currency:        currencyCode,
       },
     });
