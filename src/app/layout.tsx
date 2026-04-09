@@ -11,7 +11,8 @@ import { cookies } from "next/headers";
 import type { Locale } from "@/lib/i18n";
 import { locales, defaultLocale } from "@/lib/i18n";
 
-const GA_ID = "G-BQ6J81C260";
+const GA_ID  = "G-BQ6J81C260";
+const ADS_ID = "AW-18057514661";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -48,12 +49,17 @@ export default async function RootLayout({
           src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
           strategy="afterInteractive"
         />
+        <Script
+          src={`https://www.googletagmanager.com/gtag/js?id=${ADS_ID}`}
+          strategy="afterInteractive"
+        />
         <Script id="gtag-init" strategy="afterInteractive">
           {`
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
             gtag('js', new Date());
             gtag('config', '${GA_ID}');
+            gtag('config', '${ADS_ID}');
           `}
         </Script>
       </head>
