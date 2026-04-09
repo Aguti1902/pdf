@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -9,6 +10,8 @@ import { CheckoutTrigger } from "@/components/checkout/CheckoutTrigger";
 import { cookies } from "next/headers";
 import type { Locale } from "@/lib/i18n";
 import { locales, defaultLocale } from "@/lib/i18n";
+
+const GA_ID = "G-BQ6J81C260";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -40,6 +43,20 @@ export default async function RootLayout({
 
   return (
     <html lang={initialLocale} suppressHydrationWarning>
+      <head>
+        <Script
+          src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
+          strategy="afterInteractive"
+        />
+        <Script id="gtag-init" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', '${GA_ID}');
+          `}
+        </Script>
+      </head>
       <body className={`${inter.variable} font-sans antialiased`}>
         <LanguageProvider initialLocale={initialLocale}>
           <TooltipProvider>
