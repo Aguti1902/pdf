@@ -12,6 +12,7 @@ import {
   useElements,
   PaymentRequestButtonElement,
 } from "@stripe/react-stripe-js";
+import { fireConversion } from "@/lib/gtag";
 import {
   loadStripe,
   type PaymentRequest,
@@ -77,10 +78,12 @@ function CheckoutForm({ clientSecret, customerId, currency, userEmail, onSuccess
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
+      fireConversion(0, currency);
       onSuccess();
     } catch (err) {
       console.error(err);
       toast.info("Tarjeta guardada. Activando acceso…");
+      fireConversion(0, currency);
       onSuccess();
     }
   }, [customerId, currency, onSuccess]);
