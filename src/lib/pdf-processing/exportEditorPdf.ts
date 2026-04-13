@@ -11,7 +11,7 @@
 
 export interface ExportAnnotation {
   id: string;
-  type: "draw" | "highlight" | "shape" | "image" | "underline" | "strikethrough" | "line" | "arrow";
+  type: "draw" | "highlight" | "shape" | "ellipse" | "triangle" | "diamond" | "image" | "underline" | "strikethrough" | "line" | "arrow";
   page?: number;
   rotation?: number;
   // draw
@@ -103,6 +103,46 @@ function drawAnnotationsOnCtx(
       ctx.strokeStyle = ann.color ?? "#000";
       ctx.lineWidth = (ann.size ?? 2) * scale;
       ctx.strokeRect(ann.x * scale, ann.y! * scale, (ann.w ?? 0) * scale, (ann.h ?? 0) * scale);
+      ctx.restore();
+
+    } else if (ann.type === "ellipse" && ann.x !== undefined) {
+      ctx.save();
+      const cx2 = (ann.x + (ann.w ?? 0) / 2) * scale, cy2 = (ann.y! + (ann.h ?? 0) / 2) * scale;
+      if (rad !== 0) { ctx.translate(cx2, cy2); ctx.rotate(rad); ctx.translate(-cx2, -cy2); }
+      ctx.strokeStyle = ann.color ?? "#000";
+      ctx.lineWidth = (ann.size ?? 2) * scale;
+      ctx.beginPath();
+      ctx.ellipse(cx2, cy2, ((ann.w ?? 0) / 2) * scale, ((ann.h ?? 0) / 2) * scale, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+
+    } else if (ann.type === "triangle" && ann.x !== undefined) {
+      ctx.save();
+      const cx3 = (ann.x + (ann.w ?? 0) / 2) * scale, cy3 = (ann.y! + (ann.h ?? 0) / 2) * scale;
+      if (rad !== 0) { ctx.translate(cx3, cy3); ctx.rotate(rad); ctx.translate(-cx3, -cy3); }
+      ctx.strokeStyle = ann.color ?? "#000";
+      ctx.lineWidth = (ann.size ?? 2) * scale;
+      ctx.beginPath();
+      ctx.moveTo(cx3,                                ann.y! * scale);
+      ctx.lineTo((ann.x + (ann.w ?? 0)) * scale,    (ann.y! + (ann.h ?? 0)) * scale);
+      ctx.lineTo(ann.x * scale,                     (ann.y! + (ann.h ?? 0)) * scale);
+      ctx.closePath();
+      ctx.stroke();
+      ctx.restore();
+
+    } else if (ann.type === "diamond" && ann.x !== undefined) {
+      ctx.save();
+      const cx4 = (ann.x + (ann.w ?? 0) / 2) * scale, cy4 = (ann.y! + (ann.h ?? 0) / 2) * scale;
+      if (rad !== 0) { ctx.translate(cx4, cy4); ctx.rotate(rad); ctx.translate(-cx4, -cy4); }
+      ctx.strokeStyle = ann.color ?? "#000";
+      ctx.lineWidth = (ann.size ?? 2) * scale;
+      ctx.beginPath();
+      ctx.moveTo(cx4,                                ann.y! * scale);
+      ctx.lineTo((ann.x + (ann.w ?? 0)) * scale,    cy4);
+      ctx.lineTo(cx4,                               (ann.y! + (ann.h ?? 0)) * scale);
+      ctx.lineTo(ann.x * scale,                      cy4);
+      ctx.closePath();
+      ctx.stroke();
       ctx.restore();
 
     } else if (ann.type === "underline" && ann.x !== undefined) {

@@ -14,6 +14,7 @@ import {
   Highlighter, Image as ImageIcon, Trash2, ArrowLeft,
   RotateCw, Eraser, MousePointer2, Shapes, Upload, Share2, Loader2,
   Minus, ArrowRight, Underline, Strikethrough,
+  Circle, Triangle, Diamond,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePdfEditor } from "@/hooks/usePdfEditor";
@@ -33,6 +34,7 @@ const TOOL_ICON_MAP: Record<ToolAction, React.ElementType> = {
   shapes: Shapes, eraser: Eraser, sign: PenLine, "add-image": ImageIcon,
   rotate: RotateCw, "delete-page": Trash2,
   line: Minus, arrow: ArrowRight, underline: Underline, strikethrough: Strikethrough,
+  ellipse: Circle, triangle: Triangle, diamond: Diamond,
 };
 
 const CURSORS: Partial<Record<ToolAction, string>> = {
@@ -40,6 +42,7 @@ const CURSORS: Partial<Record<ToolAction, string>> = {
   highlight: "crosshair", shapes: "crosshair", "add-image": "copy",
   eraser: "cell", pointer: "default",
   line: "crosshair", arrow: "crosshair", underline: "crosshair", strikethrough: "crosshair",
+  ellipse: "crosshair", triangle: "crosshair", diamond: "crosshair",
 };
 
 // ─── EditorLayout ─────────────────────────────────────────────────────────────
@@ -64,7 +67,10 @@ export function EditorLayout() {
           { action: "strikethrough" as ToolAction, icon: TOOL_ICON_MAP.strikethrough, label: tr?.strikethrough ?? "Strikethrough",  desc: tr?.strikethroughDesc ?? "Draw strikethrough" },
           { action: "line"          as ToolAction, icon: TOOL_ICON_MAP.line,          label: tr?.line          ?? "Line",           desc: tr?.lineDesc          ?? "Draw a straight line" },
           { action: "arrow"         as ToolAction, icon: TOOL_ICON_MAP.arrow,         label: tr?.arrow         ?? "Arrow",          desc: tr?.arrowDesc         ?? "Draw an arrow" },
-          { action: "shapes"        as ToolAction, icon: TOOL_ICON_MAP.shapes,        label: tr?.shapes        ?? "Rectangle",      desc: tr?.shapesDesc        ?? "Draw a rectangle" },
+          { action: "shapes"    as ToolAction, icon: TOOL_ICON_MAP.shapes,    label: tr?.shapes    ?? "Rectangle", desc: tr?.shapesDesc    ?? "Draw a rectangle" },
+          { action: "ellipse"   as ToolAction, icon: TOOL_ICON_MAP.ellipse,   label: tr?.ellipse   ?? "Ellipse",   desc: tr?.ellipseDesc   ?? "Draw an ellipse/circle" },
+          { action: "triangle"  as ToolAction, icon: TOOL_ICON_MAP.triangle,  label: tr?.triangle  ?? "Triangle",  desc: tr?.triangleDesc  ?? "Draw a triangle" },
+          { action: "diamond"   as ToolAction, icon: TOOL_ICON_MAP.diamond,   label: tr?.diamond   ?? "Diamond",   desc: tr?.diamondDesc   ?? "Draw a diamond" },
           { action: "eraser"        as ToolAction, icon: TOOL_ICON_MAP.eraser,        label: tr?.eraser        ?? "Eraser",         desc: tr?.eraserDesc        ?? "Erase drawings" },
         ],
       },
@@ -203,7 +209,7 @@ export function EditorLayout() {
 
     // Pre-select tool if provided via URL (e.g. from tool landing pages)
     if (toolParam) {
-      const validTools = ["pointer","add-text","draw","highlight","shapes","eraser","line","arrow","underline","strikethrough","sign","add-image","rotate","delete-page"];
+      const validTools = ["pointer","add-text","draw","highlight","shapes","ellipse","triangle","diamond","eraser","line","arrow","underline","strikethrough","sign","add-image","rotate","delete-page"];
       if (validTools.includes(toolParam)) {
         setTimeout(() => setActiveTool(toolParam as import("@/types").ToolAction), 200);
       }
@@ -311,9 +317,10 @@ export function EditorLayout() {
       return;
     }
     if (tool === "draw") setLiveStroke({ points: [{ x, y }], color: toolColor, size: toolSize });
-    if (tool === "highlight" || tool === "shapes") {
+    if (tool === "highlight" || tool === "shapes" || tool === "ellipse" || tool === "triangle" || tool === "diamond") {
       dragStart.current = { x, y };
-      setLiveRect({ x, y, w: 0, h: 0, color: toolColor, type: tool === "highlight" ? "highlight" : "shape", size: toolSize });
+      const shapeType = tool === "highlight" ? "highlight" : tool === "shapes" ? "shape" : tool as "ellipse" | "triangle" | "diamond";
+      setLiveRect({ x, y, w: 0, h: 0, color: toolColor, type: shapeType, size: toolSize });
     }
     if (tool === "underline" || tool === "strikethrough") {
       dragStart.current = { x, y };
@@ -366,7 +373,7 @@ export function EditorLayout() {
       return;
     }
     if (tool === "draw") setLiveStroke(p => p ? { ...p, points: [...p.points, { x, y }] } : null);
-    if ((tool === "highlight" || tool === "shapes" || tool === "underline" || tool === "strikethrough") && dragStart.current) {
+    if ((tool === "highlight" || tool === "shapes" || tool === "ellipse" || tool === "triangle" || tool === "diamond" || tool === "underline" || tool === "strikethrough") && dragStart.current) {
       const { x: sx, y: sy } = dragStart.current;
       setLiveRect(p => p ? { ...p, x: Math.min(sx,x), y: Math.min(sy,y), w: Math.abs(x-sx), h: Math.abs(y-sy) } : null);
     }
@@ -399,7 +406,7 @@ export function EditorLayout() {
     const newId = crypto.randomUUID();
     if (tool === "draw" && liveStroke && liveStroke.points.length >= 2)
       commit([...annotations, { id: newId, type: "draw", points: liveStroke.points, color: liveStroke.color, size: liveStroke.size }], newId);
-    if ((tool === "highlight" || tool === "shapes" || tool === "underline" || tool === "strikethrough") && liveRect && liveRect.w > 4)
+    if ((tool === "highlight" || tool === "shapes" || tool === "ellipse" || tool === "triangle" || tool === "diamond" || tool === "underline" || tool === "strikethrough") && liveRect && liveRect.w > 4)
       commit([...annotations, { id: newId, type: liveRect.type, x: liveRect.x, y: liveRect.y, w: liveRect.w, h: liveRect.h, color: liveRect.color, size: liveRect.size }], newId);
     if ((tool === "line" || tool === "arrow") && liveLine && Math.hypot(liveLine.x2 - liveLine.x1, liveLine.y2 - liveLine.y1) > 5)
       commit([...annotations, { id: newId, type: tool as "line" | "arrow", x1: liveLine.x1, y1: liveLine.y1, x2: liveLine.x2, y2: liveLine.y2, color: liveLine.color, size: liveLine.size }], newId);

@@ -8,12 +8,12 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type DrawAnnotation  = { id: string; type: "draw";   points: { x: number; y: number }[]; color: string; size: number; rotation?: number; page?: number };
-export type RectAnnotation  = { id: string; type: "highlight" | "shape" | "underline" | "strikethrough"; x: number; y: number; w: number; h: number; color: string; size: number; rotation?: number; page?: number };
+export type RectAnnotation  = { id: string; type: "highlight" | "shape" | "ellipse" | "triangle" | "diamond" | "underline" | "strikethrough"; x: number; y: number; w: number; h: number; color: string; size: number; rotation?: number; page?: number };
 export type ImageAnnotation = { id: string; type: "image";  x: number; y: number; w: number; h: number; src: string; rotation?: number; page?: number };
 export type LineAnnotation  = { id: string; type: "line" | "arrow"; x1: number; y1: number; x2: number; y2: number; color: string; size: number; rotation?: number; page?: number };
 export type Annotation      = DrawAnnotation | RectAnnotation | ImageAnnotation | LineAnnotation;
 
-export interface LiveRect { x: number; y: number; w: number; h: number; color: string; type: "highlight" | "shape" | "underline" | "strikethrough"; size: number; }
+export interface LiveRect { x: number; y: number; w: number; h: number; color: string; type: "highlight" | "shape" | "ellipse" | "triangle" | "diamond" | "underline" | "strikethrough"; size: number; }
 export interface LiveLine { x1: number; y1: number; x2: number; y2: number; color: string; size: number; type: "line" | "arrow"; }
 
 export interface TextBox { id: string; x: number; y: number; value: string; color: string; placeholder?: string; rotation?: number; page?: number; }
@@ -310,6 +310,40 @@ export default function PdfViewer({
           ctx.lineWidth = ann.size * dpr;
           ctx.strokeRect(ann.x * dpr, ann.y * dpr, ann.w * dpr, ann.h * dpr);
         });
+      } else if (ann.type === "ellipse") {
+        const cx = (ann.x + ann.w / 2) * dpr, cy = (ann.y + ann.h / 2) * dpr;
+        drawRotated(ctx, rad, cx, cy, () => {
+          ctx.strokeStyle = ann.color;
+          ctx.lineWidth = ann.size * dpr;
+          ctx.beginPath();
+          ctx.ellipse(cx, cy, (ann.w / 2) * dpr, (ann.h / 2) * dpr, 0, 0, Math.PI * 2);
+          ctx.stroke();
+        });
+      } else if (ann.type === "triangle") {
+        const cx = (ann.x + ann.w / 2) * dpr, cy = (ann.y + ann.h / 2) * dpr;
+        drawRotated(ctx, rad, cx, cy, () => {
+          ctx.strokeStyle = ann.color;
+          ctx.lineWidth = ann.size * dpr;
+          ctx.beginPath();
+          ctx.moveTo((ann.x + ann.w / 2) * dpr, ann.y * dpr);
+          ctx.lineTo((ann.x + ann.w) * dpr,     (ann.y + ann.h) * dpr);
+          ctx.lineTo(ann.x * dpr,                (ann.y + ann.h) * dpr);
+          ctx.closePath();
+          ctx.stroke();
+        });
+      } else if (ann.type === "diamond") {
+        const cx = (ann.x + ann.w / 2) * dpr, cy = (ann.y + ann.h / 2) * dpr;
+        drawRotated(ctx, rad, cx, cy, () => {
+          ctx.strokeStyle = ann.color;
+          ctx.lineWidth = ann.size * dpr;
+          ctx.beginPath();
+          ctx.moveTo(cx,                         ann.y * dpr);
+          ctx.lineTo((ann.x + ann.w) * dpr,      cy);
+          ctx.lineTo(cx,                         (ann.y + ann.h) * dpr);
+          ctx.lineTo(ann.x * dpr,                cy);
+          ctx.closePath();
+          ctx.stroke();
+        });
       } else if (ann.type === "underline") {
         ctx.save();
         ctx.fillStyle = ann.color;
@@ -442,6 +476,35 @@ export default function PdfViewer({
         ctx.fillStyle = liveRect.color;
         ctx.fillRect(liveRect.x * dpr, liveRect.y * dpr, liveRect.w * dpr, liveRect.h * dpr);
         ctx.restore();
+      } else if (liveRect.type === "ellipse") {
+        const cx = (liveRect.x + liveRect.w / 2) * dpr;
+        const cy = (liveRect.y + liveRect.h / 2) * dpr;
+        ctx.strokeStyle = liveRect.color;
+        ctx.lineWidth = liveRect.size * dpr;
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, (liveRect.w / 2) * dpr, (liveRect.h / 2) * dpr, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      } else if (liveRect.type === "triangle") {
+        ctx.strokeStyle = liveRect.color;
+        ctx.lineWidth = liveRect.size * dpr;
+        ctx.beginPath();
+        ctx.moveTo((liveRect.x + liveRect.w / 2) * dpr, liveRect.y * dpr);
+        ctx.lineTo((liveRect.x + liveRect.w) * dpr,     (liveRect.y + liveRect.h) * dpr);
+        ctx.lineTo(liveRect.x * dpr,                    (liveRect.y + liveRect.h) * dpr);
+        ctx.closePath();
+        ctx.stroke();
+      } else if (liveRect.type === "diamond") {
+        const cx = (liveRect.x + liveRect.w / 2) * dpr;
+        const cy = (liveRect.y + liveRect.h / 2) * dpr;
+        ctx.strokeStyle = liveRect.color;
+        ctx.lineWidth = liveRect.size * dpr;
+        ctx.beginPath();
+        ctx.moveTo(cx,                              liveRect.y * dpr);
+        ctx.lineTo((liveRect.x + liveRect.w) * dpr, cy);
+        ctx.lineTo(cx,                              (liveRect.y + liveRect.h) * dpr);
+        ctx.lineTo(liveRect.x * dpr,                cy);
+        ctx.closePath();
+        ctx.stroke();
       } else if (liveRect.type === "underline") {
         ctx.save(); ctx.fillStyle = liveRect.color; ctx.globalAlpha = 0.9;
         ctx.fillRect(liveRect.x * dpr, (liveRect.y + liveRect.h - 3) * dpr, liveRect.w * dpr, 3 * dpr);
