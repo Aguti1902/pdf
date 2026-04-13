@@ -1,7 +1,7 @@
 // Google Analytics + Ads measurement helpers
 // AW conversion label: get it from Google Ads → Goals → Conversions → select action → Tag setup
 const ADS_ID          = "AW-18057514661";
-const CONVERSION_LABEL = ""; // TODO: paste your conversion label here, e.g. "abc123XYZ"
+const CONVERSION_LABEL = "V2oKCJfnspscEKWdv6JD";
 
 declare global {
   interface Window {
