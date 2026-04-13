@@ -2,8 +2,9 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   experimental: {
-    // Enable PPR for improved performance when ready
-    // ppr: true,
+    serverActions: {
+      bodySizeLimit: "20mb",
+    },
   },
   images: {
     remotePatterns: [

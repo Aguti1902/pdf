@@ -457,7 +457,15 @@ export function EditorLayout() {
     setIsSaving(true);
     try {
       const arrayBuf = await pdfFile.arrayBuffer();
-      const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuf)));
+      // Chunked base64 encoding — avoids "Maximum call stack size exceeded"
+      // when spreading large Uint8Arrays into String.fromCharCode
+      const uint8 = new Uint8Array(arrayBuf);
+      let binary = "";
+      const CHUNK = 8192;
+      for (let i = 0; i < uint8.length; i += CHUNK) {
+        binary += String.fromCharCode(...uint8.subarray(i, i + CHUNK));
+      }
+      const base64 = btoa(binary);
 
       const res = await fetch("/api/documents", {
         method: "POST",
