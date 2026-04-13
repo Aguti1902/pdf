@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import * as pdfjsLib from "pdfjs-dist";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
@@ -73,6 +73,73 @@ function drawRotated(ctx: CanvasRenderingContext2D, rad: number, cx: number, cy:
   ctx.translate(-cx, -cy);
   fn();
   ctx.restore();
+}
+
+// ─── TextBoxEditor ────────────────────────────────────────────────────────────
+// Dedicated component so useEffect-based focus fires reliably on every mount.
+interface TextBoxEditorProps {
+  tb: TextBox;
+  onBlur?: (id: string, value: string) => void;
+  onDelete?: (id: string) => void;
+}
+function TextBoxEditor({ tb, onBlur, onDelete }: TextBoxEditorProps) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+
+  // Reliable focus: fires on mount even inside canvas overlays
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    // Small delay lets React finish the render pass before focusing
+    const id = requestAnimationFrame(() => {
+      el.focus();
+      // Move cursor to end
+      const len = el.value.length;
+      el.setSelectionRange(len, len);
+    });
+    return () => cancelAnimationFrame(id);
+  }, []);
+
+  const handleBlur = useCallback((e: React.FocusEvent<HTMLTextAreaElement>) => {
+    const val = e.target.value;
+    if (!val.trim()) onDelete?.(tb.id);
+    else onBlur?.(tb.id, val);
+  }, [tb.id, onBlur, onDelete]);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Escape") {
+      const val = e.currentTarget.value;
+      if (!val.trim()) onDelete?.(tb.id);
+      else { onBlur?.(tb.id, val); e.currentTarget.blur(); }
+    }
+    // Prevent Escape/Enter from bubbling to canvas
+    e.stopPropagation();
+  }, [tb.id, onBlur, onDelete]);
+
+  return (
+    <div
+      className="absolute z-30"
+      style={{
+        left: tb.x,
+        top: tb.y,
+        transform: tb.rotation ? `rotate(${tb.rotation}deg)` : undefined,
+      }}
+      // Stop pointer events from reaching the annotation canvas below
+      onMouseDown={e => e.stopPropagation()}
+      onMouseUp={e => e.stopPropagation()}
+      onMouseMove={e => e.stopPropagation()}
+    >
+      <textarea
+        ref={ref}
+        rows={2}
+        defaultValue={tb.value}
+        className="min-w-[180px] resize rounded border-2 border-primary bg-white/97 px-2.5 py-1.5 text-sm shadow-xl outline-none focus:ring-2 focus:ring-primary/40 dark:bg-neutral-900/97"
+        style={{ color: tb.color, caretColor: tb.color }}
+        placeholder={tb.placeholder ?? "Type here..."}
+        onKeyDown={handleKeyDown}
+        onBlur={handleBlur}
+      />
+    </div>
+  );
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -339,28 +406,12 @@ export default function PdfViewer({
       />
       {/* Text boxes */}
       {textBoxes.map((tb) => (
-        <div key={tb.id} className="absolute z-20"
-          style={{ left: tb.x, top: tb.y, transform: tb.rotation ? `rotate(${tb.rotation}deg)` : undefined }}>
-          <textarea
-            autoFocus rows={2}
-            defaultValue={tb.value}
-            className="min-w-[160px] resize rounded border-2 border-primary/70 bg-white/95 px-2 py-1 text-sm shadow-lg outline-none focus:border-primary dark:bg-neutral-900/95"
-            style={{ color: tb.color }}
-            placeholder={tb.placeholder ?? "Type here..."}
-            onKeyDown={(e) => {
-              if (e.key === "Escape") {
-                const val = e.currentTarget.value;
-                if (!val.trim()) onTextBoxDelete?.(tb.id);
-                else { onTextBoxBlur?.(tb.id, val); e.currentTarget.blur(); }
-              }
-            }}
-            onBlur={(e) => {
-              const val = e.target.value;
-              if (!val.trim()) onTextBoxDelete?.(tb.id);
-              else onTextBoxBlur?.(tb.id, val);
-            }}
-          />
-        </div>
+        <TextBoxEditor
+          key={tb.id}
+          tb={tb}
+          onBlur={onTextBoxBlur}
+          onDelete={onTextBoxDelete}
+        />
       ))}
       {!loading && (
         <div className="pointer-events-none absolute bottom-3 right-3 rounded-full bg-black/50 px-2.5 py-1 text-xs text-white">
