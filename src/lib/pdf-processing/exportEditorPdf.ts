@@ -11,7 +11,7 @@
 
 export interface ExportAnnotation {
   id: string;
-  type: "draw" | "highlight" | "shape" | "image";
+  type: "draw" | "highlight" | "shape" | "image" | "underline" | "strikethrough" | "line" | "arrow";
   page?: number;
   rotation?: number;
   // draw
@@ -25,6 +25,11 @@ export interface ExportAnnotation {
   h?: number;
   // image
   src?: string;
+  // line / arrow
+  x1?: number;
+  y1?: number;
+  x2?: number;
+  y2?: number;
 }
 
 export interface ExportTextBox {
@@ -98,6 +103,42 @@ function drawAnnotationsOnCtx(
       ctx.strokeStyle = ann.color ?? "#000";
       ctx.lineWidth = (ann.size ?? 2) * scale;
       ctx.strokeRect(ann.x * scale, ann.y! * scale, (ann.w ?? 0) * scale, (ann.h ?? 0) * scale);
+      ctx.restore();
+
+    } else if (ann.type === "underline" && ann.x !== undefined) {
+      ctx.save();
+      ctx.fillStyle = ann.color ?? "#1d4ed8";
+      ctx.globalAlpha = 0.9;
+      ctx.fillRect(ann.x * scale, (ann.y! + ann.h! - 3) * scale, (ann.w ?? 0) * scale, 3 * scale);
+      ctx.restore();
+
+    } else if (ann.type === "strikethrough" && ann.x !== undefined) {
+      ctx.save();
+      ctx.fillStyle = ann.color ?? "#ef4444";
+      ctx.globalAlpha = 0.9;
+      ctx.fillRect(ann.x * scale, (ann.y! + (ann.h ?? 0) / 2 - 1.5) * scale, (ann.w ?? 0) * scale, 3 * scale);
+      ctx.restore();
+
+    } else if ((ann.type === "line" || ann.type === "arrow") && ann.x1 !== undefined) {
+      ctx.save();
+      ctx.strokeStyle = ann.color ?? "#000";
+      ctx.lineWidth = (ann.size ?? 2) * scale;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(ann.x1 * scale, ann.y1! * scale);
+      ctx.lineTo(ann.x2! * scale, ann.y2! * scale);
+      ctx.stroke();
+      if (ann.type === "arrow") {
+        const angle = Math.atan2(ann.y2! - ann.y1!, ann.x2! - ann.x1!);
+        const headLen = Math.max(14 * scale, (ann.size ?? 2) * scale * 4);
+        ctx.beginPath();
+        ctx.moveTo(ann.x2! * scale, ann.y2! * scale);
+        ctx.lineTo(ann.x2! * scale - headLen * Math.cos(angle - Math.PI / 6), ann.y2! * scale - headLen * Math.sin(angle - Math.PI / 6));
+        ctx.lineTo(ann.x2! * scale - headLen * Math.cos(angle + Math.PI / 6), ann.y2! * scale - headLen * Math.sin(angle + Math.PI / 6));
+        ctx.closePath();
+        ctx.fillStyle = ann.color ?? "#000";
+        ctx.fill();
+      }
       ctx.restore();
 
     } else if (ann.type === "image" && ann.src && ann.x !== undefined) {

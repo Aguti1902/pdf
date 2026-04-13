@@ -13,11 +13,12 @@ import {
   Undo2, Redo2, Save, FileText, Type, PenLine, Pencil,
   Highlighter, Image as ImageIcon, Trash2, ArrowLeft,
   RotateCw, Eraser, MousePointer2, Shapes, Upload, Share2, Loader2,
+  Minus, ArrowRight, Underline, Strikethrough,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePdfEditor } from "@/hooks/usePdfEditor";
 import type { ToolAction } from "@/types";
-import type { Annotation, PdfViewerProps, TextBox } from "./PdfViewer";
+import type { Annotation, PdfViewerProps, TextBox, LiveLine } from "./PdfViewer";
 import { hitTest } from "./PdfViewer";
 import { PaywallModal } from "@/components/checkout/PaywallModal";
 import { SignatureModal } from "./SignatureModal";
@@ -31,12 +32,14 @@ const TOOL_ICON_MAP: Record<ToolAction, React.ElementType> = {
   pointer: MousePointer2, "add-text": Type, draw: Pencil, highlight: Highlighter,
   shapes: Shapes, eraser: Eraser, sign: PenLine, "add-image": ImageIcon,
   rotate: RotateCw, "delete-page": Trash2,
+  line: Minus, arrow: ArrowRight, underline: Underline, strikethrough: Strikethrough,
 };
 
 const CURSORS: Partial<Record<ToolAction, string>> = {
   "add-text": "text", sign: "crosshair", draw: "crosshair",
   highlight: "crosshair", shapes: "crosshair", "add-image": "copy",
   eraser: "cell", pointer: "default",
+  line: "crosshair", arrow: "crosshair", underline: "crosshair", strikethrough: "crosshair",
 };
 
 // ─── EditorLayout ─────────────────────────────────────────────────────────────
@@ -55,10 +58,14 @@ export function EditorLayout() {
         items: [
           { action: "pointer"   as ToolAction, icon: TOOL_ICON_MAP.pointer,    label: tr?.pointer   ?? "Select / Move", desc: tr?.pointerDesc   ?? "Select and move elements" },
           { action: "add-text"  as ToolAction, icon: TOOL_ICON_MAP["add-text"], label: tr?.addText   ?? "Add Text",      desc: tr?.addTextDesc   ?? "Click to add a text box" },
-          { action: "draw"      as ToolAction, icon: TOOL_ICON_MAP.draw,        label: tr?.draw      ?? "Draw",          desc: tr?.drawDesc      ?? "Freehand drawing" },
-          { action: "highlight" as ToolAction, icon: TOOL_ICON_MAP.highlight,   label: tr?.highlight ?? "Highlight",     desc: tr?.highlightDesc ?? "Highlight areas" },
-          { action: "shapes"    as ToolAction, icon: TOOL_ICON_MAP.shapes,      label: tr?.shapes    ?? "Rectangle",     desc: tr?.shapesDesc    ?? "Draw a rectangle" },
-          { action: "eraser"    as ToolAction, icon: TOOL_ICON_MAP.eraser,      label: tr?.eraser    ?? "Eraser",        desc: tr?.eraserDesc    ?? "Erase drawings" },
+          { action: "draw"          as ToolAction, icon: TOOL_ICON_MAP.draw,          label: tr?.draw          ?? "Draw",           desc: tr?.drawDesc          ?? "Freehand drawing" },
+          { action: "highlight"     as ToolAction, icon: TOOL_ICON_MAP.highlight,     label: tr?.highlight     ?? "Highlight",      desc: tr?.highlightDesc     ?? "Highlight areas" },
+          { action: "underline"     as ToolAction, icon: TOOL_ICON_MAP.underline,     label: tr?.underline     ?? "Underline",      desc: tr?.underlineDesc     ?? "Draw underline" },
+          { action: "strikethrough" as ToolAction, icon: TOOL_ICON_MAP.strikethrough, label: tr?.strikethrough ?? "Strikethrough",  desc: tr?.strikethroughDesc ?? "Draw strikethrough" },
+          { action: "line"          as ToolAction, icon: TOOL_ICON_MAP.line,          label: tr?.line          ?? "Line",           desc: tr?.lineDesc          ?? "Draw a straight line" },
+          { action: "arrow"         as ToolAction, icon: TOOL_ICON_MAP.arrow,         label: tr?.arrow         ?? "Arrow",          desc: tr?.arrowDesc         ?? "Draw an arrow" },
+          { action: "shapes"        as ToolAction, icon: TOOL_ICON_MAP.shapes,        label: tr?.shapes        ?? "Rectangle",      desc: tr?.shapesDesc        ?? "Draw a rectangle" },
+          { action: "eraser"        as ToolAction, icon: TOOL_ICON_MAP.eraser,        label: tr?.eraser        ?? "Eraser",         desc: tr?.eraserDesc        ?? "Erase drawings" },
         ],
       },
       {
@@ -94,8 +101,11 @@ export function EditorLayout() {
   const [historyIdx,  setHistoryIdx]  = useState(0);
   const [liveStroke,  setLiveStroke]  = useState<{ points: {x:number;y:number}[]; color:string; size:number } | null>(null);
   const [liveRect,    setLiveRect]    = useState<{ x:number;y:number;w:number;h:number;color:string;type:"highlight"|"shape";size:number } | null>(null);
-  const [textBoxes,   setTextBoxes]   = useState<TextBox[]>([]);
-  const [selectedId,  setSelectedId]  = useState<string | null>(null);
+  const [textBoxes,        setTextBoxes]        = useState<TextBox[]>([]);
+  const [activeTextBoxId,  setActiveTextBoxId]  = useState<string | null>(null);
+  const [selectedTextBoxId,setSelectedTextBoxId]= useState<string | null>(null);
+  const [selectedId,       setSelectedId]       = useState<string | null>(null);
+  const [liveLine,         setLiveLine]         = useState<LiveLine | null>(null);
 
   // Tool options
   const [toolColor, setToolColor] = useState("#EF4444");
@@ -193,7 +203,7 @@ export function EditorLayout() {
 
     // Pre-select tool if provided via URL (e.g. from tool landing pages)
     if (toolParam) {
-      const validTools = ["pointer","add-text","draw","highlight","shapes","eraser","sign","add-image","rotate","delete-page"];
+      const validTools = ["pointer","add-text","draw","highlight","shapes","eraser","line","arrow","underline","strikethrough","sign","add-image","rotate","delete-page"];
       if (validTools.includes(toolParam)) {
         setTimeout(() => setActiveTool(toolParam as import("@/types").ToolAction), 200);
       }
@@ -305,10 +315,23 @@ export function EditorLayout() {
       dragStart.current = { x, y };
       setLiveRect({ x, y, w: 0, h: 0, color: toolColor, type: tool === "highlight" ? "highlight" : "shape", size: toolSize });
     }
+    if (tool === "underline" || tool === "strikethrough") {
+      dragStart.current = { x, y };
+      setLiveRect({ x, y, w: 0, h: 0, color: toolColor, type: tool as "underline" | "strikethrough", size: toolSize });
+    }
+    if (tool === "line" || tool === "arrow") {
+      dragStart.current = { x, y };
+    }
     if (tool === "add-text") {
       const id = crypto.randomUUID();
       setTextBoxes(prev => [...prev, { id, x, y, value: "", color: toolColor, placeholder: "Type here...", page: currentPageRef.current }]);
+      setActiveTextBoxId(id);
+      setSelectedTextBoxId(null);
       setActiveTool("pointer");
+    }
+    if (tool === "pointer") {
+      // Clicking canvas deselects text boxes
+      setSelectedTextBoxId(null);
     }
     if (tool === "add-image") { pendingImagePos.current = { x, y }; imageInputRef.current?.click(); }
   }, [editorState.activeTool, toolColor, toolSize, annotations, setActiveTool]);
@@ -343,15 +366,18 @@ export function EditorLayout() {
       return;
     }
     if (tool === "draw") setLiveStroke(p => p ? { ...p, points: [...p.points, { x, y }] } : null);
-    if ((tool === "highlight" || tool === "shapes") && dragStart.current) {
+    if ((tool === "highlight" || tool === "shapes" || tool === "underline" || tool === "strikethrough") && dragStart.current) {
       const { x: sx, y: sy } = dragStart.current;
       setLiveRect(p => p ? { ...p, x: Math.min(sx,x), y: Math.min(sy,y), w: Math.abs(x-sx), h: Math.abs(y-sy) } : null);
+    }
+    if ((tool === "line" || tool === "arrow") && dragStart.current) {
+      setLiveLine({ x1: dragStart.current.x, y1: dragStart.current.y, x2: x, y2: y, color: toolColor, size: toolSize, type: tool as "line" | "arrow" });
     }
     if (tool === "eraser") {
       const r = toolSize * 15;
       setAnnotations(prev => prev.filter(a => a.type !== "draw" || !a.points.some(p => Math.hypot(p.x-x, p.y-y) < r)));
     }
-  }, [editorState.activeTool, toolSize, selectedId]);
+  }, [editorState.activeTool, toolColor, toolSize, selectedId]);
 
   const handleMouseUp = useCallback(() => {
     // Finish rotation
@@ -373,12 +399,14 @@ export function EditorLayout() {
     const newId = crypto.randomUUID();
     if (tool === "draw" && liveStroke && liveStroke.points.length >= 2)
       commit([...annotations, { id: newId, type: "draw", points: liveStroke.points, color: liveStroke.color, size: liveStroke.size }], newId);
-    if ((tool === "highlight" || tool === "shapes") && liveRect && liveRect.w > 4 && liveRect.h > 4)
+    if ((tool === "highlight" || tool === "shapes" || tool === "underline" || tool === "strikethrough") && liveRect && liveRect.w > 4)
       commit([...annotations, { id: newId, type: liveRect.type, x: liveRect.x, y: liveRect.y, w: liveRect.w, h: liveRect.h, color: liveRect.color, size: liveRect.size }], newId);
+    if ((tool === "line" || tool === "arrow") && liveLine && Math.hypot(liveLine.x2 - liveLine.x1, liveLine.y2 - liveLine.y1) > 5)
+      commit([...annotations, { id: newId, type: tool as "line" | "arrow", x1: liveLine.x1, y1: liveLine.y1, x2: liveLine.x2, y2: liveLine.y2, color: liveLine.color, size: liveLine.size }], newId);
     if (tool === "eraser") commit(annotations);
 
-    setLiveStroke(null); setLiveRect(null); dragStart.current = null;
-  }, [editorState.activeTool, liveStroke, liveRect, annotations, commit]);
+    setLiveStroke(null); setLiveRect(null); setLiveLine(null); dragStart.current = null;
+  }, [editorState.activeTool, liveStroke, liveRect, liveLine, annotations, commit]);
 
   // ── Rotation handle ───────────────────────────────────────────────────────────
   const handleRotateStart = useCallback((id: string, cx: number, cy: number) => {
@@ -437,8 +465,22 @@ export function EditorLayout() {
   }, [annotations, commit]);
 
   // ── Text boxes ────────────────────────────────────────────────────────────────
-  const handleTextBoxBlur   = useCallback((id: string, value: string) => setTextBoxes(p => p.map(tb => tb.id === id ? { ...tb, value } : tb)), []);
-  const handleTextBoxDelete = useCallback((id: string) => setTextBoxes(p => p.filter(tb => tb.id !== id)), []);
+  const handleTextBoxBlur   = useCallback((id: string, value: string) => {
+    setTextBoxes(p => p.map(tb => tb.id === id ? { ...tb, value } : tb));
+    setActiveTextBoxId(null);
+  }, []);
+  const handleTextBoxDelete = useCallback((id: string) => {
+    setTextBoxes(p => p.filter(tb => tb.id !== id));
+    setActiveTextBoxId(prev  => prev  === id ? null : prev);
+    setSelectedTextBoxId(prev => prev === id ? null : prev);
+  }, []);
+  const handleTextBoxSelect   = useCallback((id: string) => setSelectedTextBoxId(id), []);
+  const handleTextBoxMove     = useCallback((id: string, x: number, y: number) =>
+    setTextBoxes(p => p.map(tb => tb.id === id ? { ...tb, x, y } : tb)), []);
+  const handleTextBoxActivate = useCallback((id: string) => {
+    setActiveTextBoxId(id);
+    setSelectedTextBoxId(null);
+  }, []);
 
   // ── Page ops ──────────────────────────────────────────────────────────────────
   const rotatePage = () => setPageRotation(r => (r + 90) % 360);
@@ -671,16 +713,22 @@ export function EditorLayout() {
                   pageRotation={pageRotation}
                   annotations={annotations.filter(a => !a.page || a.page === editorState.currentPage)}
                   textBoxes={textBoxes.filter(tb => !tb.page || tb.page === editorState.currentPage)}
+                  activeTextBoxId={activeTextBoxId}
+                  selectedTextBoxId={selectedTextBoxId}
                   selectedId={selectedId}
                   cursor={cursor}
                   liveStroke={liveStroke}
                   liveRect={liveRect}
+                  liveLine={liveLine}
                   onPdfLoaded={setTotalPages}
                   onMouseDown={handleMouseDown}
                   onMouseMove={handleMouseMoveWithRotate}
                   onMouseUp={handleMouseUp}
                   onTextBoxBlur={handleTextBoxBlur}
                   onTextBoxDelete={handleTextBoxDelete}
+                  onTextBoxSelect={handleTextBoxSelect}
+                  onTextBoxMove={handleTextBoxMove}
+                  onTextBoxActivate={handleTextBoxActivate}
                   onRotateStart={handleRotateStart}
                 />
               </div>

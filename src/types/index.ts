@@ -66,10 +66,14 @@ export type ToolAction =
   | "add-text"
   | "draw"
   | "highlight"
+  | "shapes"
   | "eraser"
+  | "line"
+  | "arrow"
+  | "underline"
+  | "strikethrough"
   | "sign"
   | "add-image"
-  | "shapes"
   | "rotate"
   | "delete-page";
 
