@@ -55,6 +55,7 @@ export interface ExportTextEdit {
   fontFamily?: string;
   fontWeight?: "normal" | "bold";
   fontStyle?: "normal" | "italic";
+  color?: string;
 }
 
 export interface ExportOptions {
@@ -285,13 +286,21 @@ export async function exportEditorPdf(opts: ExportOptions): Promise<Blob> {
     // Apply native text edits: cover original text + write new text
     const pageEdits = textEdits.filter(e => e.page === pageNum);
     if (pageEdits.length > 0) {
+      // Pre-load Google Fonts needed for this page's edits
+      const { loadGoogleFont } = await import("@/lib/pdf-fonts");
+      const fontFamilies = new Set<string>();
+      for (const edit of pageEdits) {
+        const fam = edit.fontFamily || "";
+        // Extract the Google Font family name from CSS like '"Inter", sans-serif'
+        const match = fam.match(/"([^"]+)"/);
+        if (match) fontFamilies.add(match[1]);
+      }
+      await Promise.all([...fontFamilies].map(f => loadGoogleFont(f)));
+
       for (const edit of pageEdits) {
         if (!edit.newText) continue;
 
-        // Convert all 4 corners of the text area to viewport (canvas) coordinates
-        // Baseline-left (where text starts drawing)
         const [blX, blY] = viewport.convertToViewportPoint(edit.pdfX, edit.pdfY);
-        // Top-right (pdfY + fontSize in PDF space = top of glyphs)
         const [trX, trY] = viewport.convertToViewportPoint(
           edit.pdfX + edit.pdfWidth,
           edit.pdfY + edit.pdfFontSize,
@@ -304,21 +313,20 @@ export async function exportEditorPdf(opts: ExportOptions): Promise<Blob> {
         const width  = right - left;
         const height = bottom - top;
 
-        // Cover original text with generous padding
+        // Cover original text
         ctx.save();
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(left - 2, top - 2, width + 4, height + 4);
 
-        // Use the actual PDF font size scaled to export canvas
+        // Rebuild font string with exact PDF size
         const exportFontSize = edit.pdfFontSize * EXPORT_SCALE;
         const fStyle  = edit.fontStyle  === "italic" ? "italic "  : "";
         const fWeight = edit.fontWeight === "bold"   ? "bold "    : "";
         const fFamily = edit.fontFamily || "sans-serif";
 
         ctx.font         = `${fStyle}${fWeight}${exportFontSize}px ${fFamily}`;
-        ctx.fillStyle    = "#000000";
+        ctx.fillStyle    = edit.color || "#000000";
         ctx.textBaseline = "alphabetic";
-        // blX/blY is the baseline-left point at export scale
         ctx.fillText(edit.newText, blX, blY);
         ctx.restore();
       }

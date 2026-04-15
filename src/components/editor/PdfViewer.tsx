@@ -30,15 +30,17 @@ export interface PdfTextItem {
   pdfFontSize: number;  // font size in PDF user units
   pdfWidth: number;     // text width in PDF user units
   fontName: string;
-  // Resolved typography from pdfjs styles
-  cssFont: string;      // full CSS font string, e.g. "bold italic 14px Arial, sans-serif"
-  fontFamily: string;
+  // Resolved typography
+  cssFont: string;      // full CSS font shorthand
+  fontFamily: string;   // CSS font-family (e.g. '"Inter", sans-serif')
   fontWeight: "normal" | "bold";
   fontStyle: "normal" | "italic";
+  color: string;        // detected text color (hex)
   screenLeft: number;   // CSS px position at current zoom
   screenTop: number;
   screenWidth: number;
   screenHeight: number;
+  screenFontSize: number; // real font size in CSS px
 }
 
 /** A committed edit to a native PDF text item */
@@ -55,6 +57,7 @@ export interface TextEdit {
   fontFamily: string;
   fontWeight: "normal" | "bold";
   fontStyle: "normal" | "italic";
+  color: string;
 }
 
 export interface PdfViewerProps {
@@ -115,16 +118,6 @@ export function hitTest(ann: Annotation, mx: number, my: number, pad = 8): boole
   return lx >= -bb.w / 2 - pad && lx <= bb.w / 2 + pad && ly >= -bb.h / 2 - pad && ly <= bb.h / 2 + pad;
 }
 
-// ─── Font family detection from PDF font name ─────────────────────────────────
-function detectGenericFamily(fontName: string): string {
-  const n = fontName.toLowerCase();
-  if (/courier|mono|typewriter|consolat|lucidaconsole/i.test(n)) return "monospace";
-  if (/times|georgia|garamond|palatino|bookman|minion|century|caslon|didot|bodoni/i.test(n)) return "serif";
-  if (/symbol|zapfdingbats|wingdings/i.test(n)) return "sans-serif";
-  // Default to sans-serif for Helvetica, Arial, Calibri, etc.
-  return "sans-serif";
-}
-
 // ─── Canvas helpers for rotated drawing ──────────────────────────────────────
 
 function drawRotated(ctx: CanvasRenderingContext2D, rad: number, cx: number, cy: number, fn: () => void) {
@@ -144,33 +137,36 @@ interface TextItemEditorProps {
   onCommit: (value: string) => void;
 }
 function TextItemEditor({ item, initialValue, onCommit }: TextItemEditorProps) {
-  const ref       = useRef<HTMLInputElement>(null);
-  const valueRef  = useRef<string>(initialValue);   // always current value
-  const doneRef   = useRef(false);                  // guard against double-commit
+  const ref      = useRef<HTMLDivElement>(null);
+  const doneRef  = useRef(false);
 
-  // Reliable focus: autoFocus + RAF fallback
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    el.focus();
-    el.select();
-    const id = requestAnimationFrame(() => { el.focus(); el.select(); });
+    // Set initial text and select all
+    el.textContent = initialValue;
+    const id = requestAnimationFrame(() => {
+      el.focus();
+      const sel = window.getSelection();
+      if (sel) { sel.selectAllChildren(el); }
+    });
     return () => cancelAnimationFrame(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const doCommit = useCallback(() => {
     if (doneRef.current) return;
     doneRef.current = true;
-    onCommit(valueRef.current);
+    const text = ref.current?.textContent ?? "";
+    onCommit(text);
   }, [onCommit]);
 
   return (
-    <input
-      // eslint-disable-next-line jsx-a11y/no-autofocus
-      autoFocus
+    <div
       ref={ref}
-      defaultValue={initialValue}
-      onChange={e => { valueRef.current = e.target.value; }}
+      contentEditable
+      suppressContentEditableWarning
+      spellCheck={false}
       onBlur={doCommit}
       onKeyDown={e => {
         e.stopPropagation();
@@ -186,19 +182,21 @@ function TextItemEditor({ item, initialValue, onCommit }: TextItemEditorProps) {
         position: "absolute",
         left: 0,
         top: 0,
-        width: Math.max(item.screenWidth * 1.5, 150),
-        height: Math.max(item.screenHeight + 4, 22),
+        minWidth: Math.max(item.screenWidth, 60),
+        minHeight: item.screenHeight,
         font: item.cssFont,
-        lineHeight: `${Math.max(item.screenHeight + 4, 22)}px`,
-        background: "white",
-        border: "2px solid #3b82f6",
-        borderRadius: 3,
-        padding: "0 6px",
-        outline: "none",
-        boxShadow: "0 4px 16px rgba(59,130,246,0.25)",
+        color: item.color,
+        lineHeight: `${item.screenHeight}px`,
+        background: "rgba(255,255,255,0.95)",
+        borderBottom: "2px solid #3b82f6",
+        outline: "2px solid rgba(59,130,246,0.4)",
+        outlineOffset: 1,
+        borderRadius: 1,
+        padding: "0 2px",
         zIndex: 60,
         boxSizing: "border-box",
-        color: "#111",
+        whiteSpace: "nowrap",
+        cursor: "text",
       }}
     />
   );
@@ -410,8 +408,18 @@ export default function PdfViewer({
       // pdfjs exposes resolved font families in textContent.styles
       const styles = (tc as { items: unknown[]; styles: Record<string, { fontFamily: string }> }).styles ?? {};
 
+      // Detect dominant text color by sampling the rendered canvas
+      const pdfCanvas = pdfCanvasRef.current;
+      let canvasCtx: CanvasRenderingContext2D | null = null;
+      if (pdfCanvas) canvasCtx = pdfCanvas.getContext("2d", { willReadFrequently: true });
+
+      // Import font resolver
+      const { resolvePdfFont, preloadFonts, buildCssFont } = await import("@/lib/pdf-fonts");
+
       const items: PdfTextItem[] = [];
+      const fontInfos: { family: string; weight: "normal" | "bold"; style: "normal" | "italic"; googleFamily?: string; generic: string }[] = [];
       let idx = 0;
+
       for (const raw of tc.items) {
         if (!("str" in raw)) continue;
         const ti = raw as { str: string; transform: number[]; width: number; fontName: string };
@@ -421,25 +429,33 @@ export default function PdfViewer({
         const fontSizePdf = Math.sqrt(a * a + b * b) || 12;
         const widthPdf = ti.width > 0 ? ti.width : fontSizePdf * ti.str.length * 0.55;
 
-        // Baseline point
         const [bx, by] = cssVp.convertToViewportPoint(e, f);
-        // Top-right of text cell (PDF y goes up → smaller screenY)
         const [tx, ty] = cssVp.convertToViewportPoint(e + widthPdf, f + fontSizePdf);
 
         const screenLeft   = Math.min(bx, tx);
         const screenTop    = Math.min(by, ty);
         const screenWidth  = Math.max(Math.abs(tx - bx), 8);
         const screenHeight = Math.max(Math.abs(by - ty), 8);
+        const screenFontSize = Math.max(fontSizePdf * cssScale, 6);
 
-        // Use the real PDF font size scaled to CSS pixels (not height heuristic)
-        const fontSize     = Math.max(fontSizePdf * cssScale, 6);
+        // Resolve font info
+        const pdfjsFamily = styles[ti.fontName]?.fontFamily ?? "";
+        const fontInfo    = resolvePdfFont(ti.fontName, pdfjsFamily);
+        fontInfos.push(fontInfo);
+        const cssFont = buildCssFont(screenFontSize, fontInfo);
 
-        // Resolve typography from pdfjs styles + font name heuristics
-        const rawFamily   = styles[ti.fontName]?.fontFamily ?? "";
-        const fontFamily  = rawFamily || detectGenericFamily(ti.fontName);
-        const fontWeight: "normal" | "bold"     = /bold/i.test(ti.fontName) ? "bold" : "normal";
-        const fontStyle:  "normal" | "italic"   = /italic|oblique/i.test(ti.fontName) ? "italic" : "normal";
-        const cssFont     = `${fontStyle !== "normal" ? fontStyle + " " : ""}${fontWeight !== "normal" ? fontWeight + " " : ""}${fontSize}px ${fontFamily}`;
+        // Sample text color from the rendered canvas (center of text area)
+        let color = "#000000";
+        if (canvasCtx) {
+          const sampleX = Math.round((screenLeft + screenWidth / 2) * dpr);
+          const sampleY = Math.round((screenTop + screenHeight * 0.6) * dpr);
+          try {
+            const pixel = canvasCtx.getImageData(sampleX, sampleY, 1, 1).data;
+            if (pixel[3] > 50) {
+              color = `#${((1 << 24) + (pixel[0] << 16) + (pixel[1] << 8) + pixel[2]).toString(16).slice(1)}`;
+            }
+          } catch { /* CORS or empty */ }
+        }
 
         items.push({
           id: `${pageNum}-${idx}`,
@@ -449,11 +465,18 @@ export default function PdfViewer({
           pdfFontSize: fontSizePdf,
           pdfWidth: widthPdf,
           fontName: ti.fontName ?? "",
-          cssFont, fontFamily, fontWeight, fontStyle,
-          screenLeft, screenTop, screenWidth, screenHeight,
+          cssFont, fontFamily: fontInfo.family,
+          fontWeight: fontInfo.weight, fontStyle: fontInfo.style,
+          color,
+          screenLeft, screenTop, screenWidth, screenHeight, screenFontSize,
         });
         idx++;
       }
+
+      // Pre-load matching Google Fonts before showing overlays
+      await preloadFonts(fontInfos);
+      if (cancelled) return;
+
       setExtractedItems(items);
       setEditingItemId(null);
     }).catch(() => {});
@@ -848,7 +871,6 @@ export default function PdfViewer({
                     initialValue={committedEdit?.newText ?? item.str}
                     onCommit={newText => {
                       setEditingItemId(null);
-                      // Always fire the commit so the parent can decide
                       onTextEditCommit?.({
                         id: item.id,
                         page: item.page,
@@ -861,11 +883,11 @@ export default function PdfViewer({
                         fontFamily: item.fontFamily,
                         fontWeight: item.fontWeight,
                         fontStyle: item.fontStyle,
+                        color: item.color,
                       });
                     }}
                   />
                 ) : committedEdit ? (
-                  /* Show edited text with white background (hides original canvas text) */
                   <div
                     title="Haz clic para editar"
                     style={{
@@ -873,11 +895,12 @@ export default function PdfViewer({
                       height: "100%",
                       background: "white",
                       font: item.cssFont,
+                      color: item.color,
                       display: "flex",
                       alignItems: "center",
                       cursor: "text",
                       userSelect: "none",
-                      borderBottom: "2px solid #3b82f6",
+                      borderBottom: "2px solid #22c55e",
                       paddingLeft: 2,
                       overflow: "hidden",
                       whiteSpace: "nowrap",
