@@ -52,6 +52,9 @@ export interface ExportTextEdit {
   pdfY: number;
   pdfFontSize: number;
   pdfWidth: number;
+  fontFamily?: string;
+  fontWeight?: "normal" | "bold";
+  fontStyle?: "normal" | "italic";
 }
 
 export interface ExportOptions {
@@ -295,16 +298,19 @@ export async function exportEditorPdf(opts: ExportOptions): Promise<Blob> {
         const width  = Math.abs(tx - bx) + 2;
         const height = Math.abs(by - ty) + 4;
 
-        // Cover original text
+        // Cover original text with a white rectangle
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(left, top, width, height);
 
-        // Write new text at baseline position (bx, by)
-        const fontSize = Math.max(height * 0.82, 8);
-        ctx.font = `${fontSize}px sans-serif`;
-        ctx.fillStyle = "#000000";
+        // Rebuild the CSS font string matching the original typography
+        const fontSize   = Math.max(height * 0.9, 8);
+        const fStyle     = edit.fontStyle  === "italic" ? "italic "  : "";
+        const fWeight    = edit.fontWeight === "bold"   ? "bold "    : "";
+        const fFamily    = edit.fontFamily || "sans-serif";
+        ctx.font         = `${fStyle}${fWeight}${fontSize}px ${fFamily}`;
+        ctx.fillStyle    = "#000000";
         ctx.textBaseline = "alphabetic";
-        ctx.fillText(edit.newText, bx, by, width + 10);
+        ctx.fillText(edit.newText, bx, by, width + 20);
       }
     }
 

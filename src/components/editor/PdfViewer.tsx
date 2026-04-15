@@ -30,6 +30,11 @@ export interface PdfTextItem {
   pdfFontSize: number;  // font size in PDF user units
   pdfWidth: number;     // text width in PDF user units
   fontName: string;
+  // Resolved typography from pdfjs styles
+  cssFont: string;      // full CSS font string, e.g. "bold italic 14px Arial, sans-serif"
+  fontFamily: string;
+  fontWeight: "normal" | "bold";
+  fontStyle: "normal" | "italic";
   screenLeft: number;   // CSS px position at current zoom
   screenTop: number;
   screenWidth: number;
@@ -46,6 +51,10 @@ export interface TextEdit {
   pdfY: number;
   pdfFontSize: number;
   pdfWidth: number;
+  // Typography carried through for export
+  fontFamily: string;
+  fontWeight: "normal" | "bold";
+  fontStyle: "normal" | "italic";
 }
 
 export interface PdfViewerProps {
@@ -106,6 +115,16 @@ export function hitTest(ann: Annotation, mx: number, my: number, pad = 8): boole
   return lx >= -bb.w / 2 - pad && lx <= bb.w / 2 + pad && ly >= -bb.h / 2 - pad && ly <= bb.h / 2 + pad;
 }
 
+// ─── Font family detection from PDF font name ─────────────────────────────────
+function detectGenericFamily(fontName: string): string {
+  const n = fontName.toLowerCase();
+  if (/courier|mono|typewriter|consolat|lucidaconsole/i.test(n)) return "monospace";
+  if (/times|georgia|garamond|palatino|bookman|minion|century|caslon|didot|bodoni/i.test(n)) return "serif";
+  if (/symbol|zapfdingbats|wingdings/i.test(n)) return "sans-serif";
+  // Default to sans-serif for Helvetica, Arial, Calibri, etc.
+  return "sans-serif";
+}
+
 // ─── Canvas helpers for rotated drawing ──────────────────────────────────────
 
 function drawRotated(ctx: CanvasRenderingContext2D, rad: number, cx: number, cy: number, fn: () => void) {
@@ -134,6 +153,8 @@ function TextItemEditor({ item, initialValue, onCommit }: TextItemEditorProps) {
     return () => cancelAnimationFrame(id);
   }, []);
 
+  const fontSize = Math.max(item.screenHeight * 0.9, 8);
+
   return (
     <input
       ref={ref}
@@ -155,8 +176,11 @@ function TextItemEditor({ item, initialValue, onCommit }: TextItemEditorProps) {
         top: 0,
         width: Math.max(item.screenWidth * 1.5, 120),
         height: item.screenHeight,
-        fontSize: Math.max(item.screenHeight * 0.82, 10),
-        fontFamily: "sans-serif",
+        fontSize,
+        fontFamily: item.fontFamily || "sans-serif",
+        fontWeight: item.fontWeight,
+        fontStyle: item.fontStyle,
+        lineHeight: `${item.screenHeight}px`,
         background: "white",
         border: "2px solid #3b82f6",
         borderRadius: 2,
@@ -373,6 +397,9 @@ export default function PdfViewer({
       const tc = await pdfPage.getTextContent();
       if (cancelled) return;
 
+      // pdfjs exposes resolved font families in textContent.styles
+      const styles = (tc as { items: unknown[]; styles: Record<string, { fontFamily: string }> }).styles ?? {};
+
       const items: PdfTextItem[] = [];
       let idx = 0;
       for (const raw of tc.items) {
@@ -386,13 +413,21 @@ export default function PdfViewer({
 
         // Baseline point
         const [bx, by] = cssVp.convertToViewportPoint(e, f);
-        // Top-right of text cell (PDF y goes up, so f+fontSize is higher = smaller screenY)
+        // Top-right of text cell (PDF y goes up → smaller screenY)
         const [tx, ty] = cssVp.convertToViewportPoint(e + widthPdf, f + fontSizePdf);
 
         const screenLeft   = Math.min(bx, tx);
         const screenTop    = Math.min(by, ty);
         const screenWidth  = Math.max(Math.abs(tx - bx), 8);
         const screenHeight = Math.max(Math.abs(by - ty), 8);
+        const fontSize     = Math.max(screenHeight * 0.9, 8);
+
+        // Resolve typography from pdfjs styles + font name heuristics
+        const rawFamily   = styles[ti.fontName]?.fontFamily ?? "";
+        const fontFamily  = rawFamily || detectGenericFamily(ti.fontName);
+        const fontWeight: "normal" | "bold"     = /bold/i.test(ti.fontName) ? "bold" : "normal";
+        const fontStyle:  "normal" | "italic"   = /italic|oblique/i.test(ti.fontName) ? "italic" : "normal";
+        const cssFont     = `${fontStyle !== "normal" ? fontStyle + " " : ""}${fontWeight !== "normal" ? fontWeight + " " : ""}${fontSize}px ${fontFamily}`;
 
         items.push({
           id: `${pageNum}-${idx}`,
@@ -402,6 +437,7 @@ export default function PdfViewer({
           pdfFontSize: fontSizePdf,
           pdfWidth: widthPdf,
           fontName: ti.fontName ?? "",
+          cssFont, fontFamily, fontWeight, fontStyle,
           screenLeft, screenTop, screenWidth, screenHeight,
         });
         idx++;
@@ -811,6 +847,9 @@ export default function PdfViewer({
                         pdfY: item.pdfY,
                         pdfFontSize: item.pdfFontSize,
                         pdfWidth: item.pdfWidth,
+                        fontFamily: item.fontFamily,
+                        fontWeight: item.fontWeight,
+                        fontStyle: item.fontStyle,
                       });
                     }}
                   />
@@ -822,8 +861,7 @@ export default function PdfViewer({
                       width: "100%",
                       height: "100%",
                       background: "white",
-                      fontSize: Math.max(item.screenHeight * 0.82, 8),
-                      fontFamily: "sans-serif",
+                      font: item.cssFont,
                       display: "flex",
                       alignItems: "center",
                       cursor: "text",
