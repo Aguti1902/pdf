@@ -518,9 +518,11 @@ export function EditorLayout() {
 
     setIsSaving(true);
     try {
-      const arrayBuf = await pdfFile.arrayBuffer();
-      // Chunked base64 encoding — avoids "Maximum call stack size exceeded"
-      // when spreading large Uint8Arrays into String.fromCharCode
+      // Export the PDF with ALL edits baked in (annotations, text boxes, text edits, rotation, deleted pages)
+      const { exportEditorPdf } = await import("@/lib/pdf-processing/exportEditorPdf");
+      const blob = await exportEditorPdf({ pdfFile, annotations, textBoxes, textEdits, pageRotation, deletedPages });
+
+      const arrayBuf = await blob.arrayBuffer();
       const uint8 = new Uint8Array(arrayBuf);
       let binary = "";
       const CHUNK = 8192;
@@ -536,9 +538,9 @@ export function EditorLayout() {
           id:          docId ?? undefined,
           title:       fileName,
           fileData:    base64,
-          fileSize:    pdfFile.size,
-          annotations: annotations,
-          pageCount:   editorState.totalPages,
+          fileSize:    blob.size,
+          annotations: [],
+          pageCount:   editorState.totalPages - deletedPages.size,
         }),
       });
       if (!res.ok) throw new Error();
@@ -553,7 +555,7 @@ export function EditorLayout() {
     } finally {
       setIsSaving(false);
     }
-  }, [pdfFile, pdfUrl, userEmail, fileName, docId, annotations, editorState.totalPages]);
+  }, [pdfFile, pdfUrl, userEmail, fileName, docId, annotations, textBoxes, textEdits, pageRotation, deletedPages, editorState.totalPages]);
 
   // ── Download / Share flow: Auth → Paywall ─────────────────────────────────────
   const [isExporting, setIsExporting] = useState(false);
