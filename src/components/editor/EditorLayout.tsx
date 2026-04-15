@@ -316,6 +316,7 @@ export function EditorLayout() {
         setSelectedId(null);
         isPointerDragging.current = false;
       }
+      setSelectedTextBoxId(null);
       return;
     }
     if (tool === "draw") setLiveStroke({ points: [{ x, y }], color: toolColor, size: toolSize });
@@ -337,10 +338,6 @@ export function EditorLayout() {
       setActiveTextBoxId(id);
       setSelectedTextBoxId(null);
       setActiveTool("pointer");
-    }
-    if (tool === "pointer") {
-      // Clicking canvas deselects text boxes
-      setSelectedTextBoxId(null);
     }
     if (tool === "add-image") { pendingImagePos.current = { x, y }; imageInputRef.current?.click(); }
   }, [editorState.activeTool, toolColor, toolSize, annotations, setActiveTool]);
