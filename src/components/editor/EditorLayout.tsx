@@ -61,7 +61,7 @@ export function EditorLayout() {
         items: [
           { action: "pointer"   as ToolAction, icon: TOOL_ICON_MAP.pointer,      label: tr?.pointer    ?? "Select / Move",  desc: tr?.pointerDesc   ?? "Select and move elements" },
           { action: "add-text"  as ToolAction, icon: TOOL_ICON_MAP["add-text"],  label: tr?.addText    ?? "Add Text",       desc: tr?.addTextDesc   ?? "Click to add a text box" },
-          { action: "text-edit" as ToolAction, icon: TOOL_ICON_MAP["text-edit"], label: tr?.textEdit   ?? "Edit Text",      desc: tr?.textEditDesc  ?? "Click on any existing text to edit it inline" },
+          { action: "text-edit" as ToolAction, icon: TOOL_ICON_MAP["text-edit"], label: "Edit Text",      desc: "Click on any existing text to edit it inline" },
           { action: "draw"          as ToolAction, icon: TOOL_ICON_MAP.draw,          label: tr?.draw          ?? "Draw",           desc: tr?.drawDesc          ?? "Freehand drawing" },
           { action: "highlight"     as ToolAction, icon: TOOL_ICON_MAP.highlight,     label: tr?.highlight     ?? "Highlight",      desc: tr?.highlightDesc     ?? "Highlight areas" },
           { action: "underline"     as ToolAction, icon: TOOL_ICON_MAP.underline,     label: tr?.underline     ?? "Underline",      desc: tr?.underlineDesc     ?? "Draw underline" },
