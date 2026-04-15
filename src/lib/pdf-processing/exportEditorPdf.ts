@@ -286,16 +286,16 @@ export async function exportEditorPdf(opts: ExportOptions): Promise<Blob> {
     // Apply native text edits: cover original text + write new text
     const pageEdits = textEdits.filter(e => e.page === pageNum);
     if (pageEdits.length > 0) {
-      // Pre-load Google Fonts needed for this page's edits
-      const { loadGoogleFont } = await import("@/lib/pdf-fonts");
+      const { loadGoogleFont, waitForFonts, buildCanvasFont } = await import("@/lib/pdf-fonts");
+
+      // Pre-load every Google Font referenced by edits on this page
       const fontFamilies = new Set<string>();
       for (const edit of pageEdits) {
-        const fam = edit.fontFamily || "";
-        // Extract the Google Font family name from CSS like '"Inter", sans-serif'
-        const match = fam.match(/"([^"]+)"/);
+        const match = (edit.fontFamily || "").match(/"([^"]+)"/);
         if (match) fontFamilies.add(match[1]);
       }
       await Promise.all([...fontFamilies].map(f => loadGoogleFont(f)));
+      await waitForFonts();
 
       for (const edit of pageEdits) {
         if (!edit.newText) continue;
@@ -313,18 +313,21 @@ export async function exportEditorPdf(opts: ExportOptions): Promise<Blob> {
         const width  = right - left;
         const height = bottom - top;
 
-        // Cover original text
         ctx.save();
+        // White rectangle covering the original text
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(left - 2, top - 2, width + 4, height + 4);
 
-        // Rebuild font string with exact PDF size
+        // Build canvas font string using exact PDF font size
         const exportFontSize = edit.pdfFontSize * EXPORT_SCALE;
-        const fStyle  = edit.fontStyle  === "italic" ? "italic "  : "";
-        const fWeight = edit.fontWeight === "bold"   ? "bold "    : "";
-        const fFamily = edit.fontFamily || "sans-serif";
+        const fontStr = buildCanvasFont(exportFontSize, {
+          family:  edit.fontFamily || "sans-serif",
+          weight:  edit.fontWeight || "normal",
+          style:   edit.fontStyle  || "normal",
+          generic: "sans-serif",
+        });
 
-        ctx.font         = `${fStyle}${fWeight}${exportFontSize}px ${fFamily}`;
+        ctx.font         = fontStr;
         ctx.fillStyle    = edit.color || "#000000";
         ctx.textBaseline = "alphabetic";
         ctx.fillText(edit.newText, blX, blY);

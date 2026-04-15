@@ -5,15 +5,25 @@
  * CSS font-family names and loads matching Google Fonts on demand.
  */
 
-// ─── PDF font name → web font mapping ────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 
-interface FontInfo {
-  family: string;          // CSS font-family value
+export interface FontInfo {
+  family: string;          // CSS font-family value (e.g. '"Inter", sans-serif')
   weight: "normal" | "bold";
   style: "normal" | "italic";
-  googleFamily?: string;   // Google Fonts family name (if available)
+  googleFamily?: string;   // Google Fonts family name (for loading)
   generic: string;         // fallback generic: serif | sans-serif | monospace
 }
+
+export interface FontStyleProps {
+  fontFamily: string;
+  fontWeight: "normal" | "bold";
+  fontStyle: "normal" | "italic";
+  fontSize: string;       // e.g. "14px"
+  lineHeight: string;
+}
+
+// ─── PDF font name → web font mapping ────────────────────────────────────────
 
 const FONT_MAP: Record<string, { google?: string; generic: string }> = {
   // Sans-serif
@@ -54,16 +64,16 @@ const FONT_MAP: Record<string, { google?: string; generic: string }> = {
   "lucida console": { google: "Source Code Pro", generic: "monospace" },
 };
 
-/** Strip PDF-internal prefix like "BCDEEE+" and suffixes like ",Bold" "-BoldItalic" */
+// ─── Internal helpers ─────────────────────────────────────────────────────────
+
 function cleanFontName(raw: string): string {
   return raw
-    .replace(/^[A-Z]{6}\+/, "")     // strip subset prefix
+    .replace(/^[A-Z]{6}\+/, "")
     .replace(/[-,](bold|italic|oblique|regular|medium|light|semibold|book|roman|condensed|narrow|extended|heavy|black|thin|extra\s*light)/gi, " ")
     .replace(/\s+/g, " ")
     .trim();
 }
 
-/** Detect weight/style from the raw PDF font name */
 function detectWeightStyle(raw: string): { weight: "normal" | "bold"; style: "normal" | "italic" } {
   const n = raw.toLowerCase();
   return {
@@ -72,7 +82,8 @@ function detectWeightStyle(raw: string): { weight: "normal" | "bold"; style: "no
   };
 }
 
-/** Resolve a PDF internal font name to a full FontInfo */
+// ─── Public: resolve a PDF font name to FontInfo ──────────────────────────────
+
 export function resolvePdfFont(
   rawFontName: string,
   pdfjsFamily?: string,
@@ -80,7 +91,6 @@ export function resolvePdfFont(
 ): FontInfo {
   let { weight, style } = detectWeightStyle(rawFontName);
 
-  // Also check the weight exposed by pdfjs styles (more reliable for some PDFs)
   if (pdfjsFontWeight) {
     const fw = String(pdfjsFontWeight).toLowerCase();
     if (fw === "bold" || Number(fw) >= 600) weight = "bold";
@@ -88,7 +98,6 @@ export function resolvePdfFont(
 
   const cleaned = cleanFontName(rawFontName).toLowerCase();
 
-  // Try exact match in our map
   for (const [key, val] of Object.entries(FONT_MAP)) {
     if (cleaned.includes(key)) {
       const family = val.google
@@ -98,7 +107,6 @@ export function resolvePdfFont(
     }
   }
 
-  // Use pdfjs-provided family if available
   if (pdfjsFamily && pdfjsFamily !== "sans-serif" && pdfjsFamily !== "serif" && pdfjsFamily !== "monospace") {
     const lowered = pdfjsFamily.toLowerCase();
     for (const [key, val] of Object.entries(FONT_MAP)) {
@@ -112,7 +120,6 @@ export function resolvePdfFont(
     return { family: `"${pdfjsFamily}", sans-serif`, weight, style, generic: "sans-serif" };
   }
 
-  // Fallback: detect generic family
   if (/courier|mono|typewriter|consolat/i.test(cleaned))
     return { family: '"Courier Prime", monospace', weight, style, googleFamily: "Courier Prime", generic: "monospace" };
   if (/times|georgia|garamond|palatino|minion|caslon|bodoni|didot|baskerville/i.test(cleaned))
@@ -121,12 +128,33 @@ export function resolvePdfFont(
   return { family: '"Inter", sans-serif', weight, style, googleFamily: "Inter", generic: "sans-serif" };
 }
 
+// ─── Public: build individual CSS style props (NOT shorthand) ─────────────────
+
+export function buildStyleProps(fontSize: number, info: FontInfo, height?: number): FontStyleProps {
+  return {
+    fontFamily: info.family,
+    fontWeight: info.weight,
+    fontStyle: info.style,
+    fontSize: `${fontSize}px`,
+    lineHeight: height ? `${height}px` : `${fontSize * 1.2}px`,
+  };
+}
+
+/** Build a canvas-compatible font string */
+export function buildCanvasFont(fontSize: number, info: FontInfo): string {
+  const parts: string[] = [];
+  if (info.style === "italic") parts.push("italic");
+  if (info.weight === "bold") parts.push("bold");
+  parts.push(`${fontSize}px`);
+  parts.push(info.family);
+  return parts.join(" ");
+}
+
 // ─── Dynamic Google Fonts loader ──────────────────────────────────────────────
 
 const loadedFamilies = new Set<string>();
 const loadingPromises = new Map<string, Promise<void>>();
 
-/** Load a Google Font family into the document (idempotent, returns when loaded) */
 export async function loadGoogleFont(family: string, weights?: number[]): Promise<void> {
   if (!family || typeof document === "undefined") return;
   if (loadedFamilies.has(family)) return;
@@ -142,8 +170,19 @@ export async function loadGoogleFont(family: string, weights?: number[]): Promis
     const link = document.createElement("link");
     link.rel = "stylesheet";
     link.href = url;
-    link.onload = () => { loadedFamilies.add(family); resolve(); };
-    link.onerror = () => { resolve(); }; // don't block on failure
+    link.onload = () => {
+      // Wait for the browser to actually download and parse the font files
+      if (document.fonts?.ready) {
+        document.fonts.ready.then(() => {
+          loadedFamilies.add(family);
+          resolve();
+        });
+      } else {
+        loadedFamilies.add(family);
+        resolve();
+      }
+    };
+    link.onerror = () => { resolve(); };
     document.head.appendChild(link);
   });
 
@@ -151,21 +190,21 @@ export async function loadGoogleFont(family: string, weights?: number[]): Promis
   return promise;
 }
 
-/** Pre-load all Google Fonts needed for a set of font infos */
 export async function preloadFonts(infos: FontInfo[]): Promise<void> {
   const families = new Set<string>();
   for (const info of infos) {
     if (info.googleFamily) families.add(info.googleFamily);
   }
   await Promise.all([...families].map(f => loadGoogleFont(f)));
+  // Final safety: wait for ALL fonts to be ready
+  if (typeof document !== "undefined" && document.fonts?.ready) {
+    await document.fonts.ready;
+  }
 }
 
-/** Build a complete CSS font shorthand */
-export function buildCssFont(fontSize: number, info: FontInfo): string {
-  const parts: string[] = [];
-  if (info.style === "italic") parts.push("italic");
-  if (info.weight === "bold") parts.push("bold");
-  parts.push(`${fontSize}px`);
-  parts.push(info.family);
-  return parts.join(" ");
+/** Wait for fonts to be ready (call before canvas fillText) */
+export async function waitForFonts(): Promise<void> {
+  if (typeof document !== "undefined" && document.fonts?.ready) {
+    await document.fonts.ready;
+  }
 }

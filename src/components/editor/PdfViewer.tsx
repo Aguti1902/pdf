@@ -143,12 +143,20 @@ function TextItemEditor({ item, initialValue, onCommit }: TextItemEditorProps) {
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    // Set initial text and select all
     el.textContent = initialValue;
+
+    // Force-apply each style property individually to beat Tailwind resets
+    el.style.setProperty("font-family", item.fontFamily, "important");
+    el.style.setProperty("font-weight", item.fontWeight, "important");
+    el.style.setProperty("font-style",  item.fontStyle,  "important");
+    el.style.setProperty("font-size",   `${item.screenFontSize}px`, "important");
+    el.style.setProperty("color",       item.color, "important");
+    el.style.setProperty("line-height", `${item.screenHeight}px`, "important");
+
     const id = requestAnimationFrame(() => {
       el.focus();
       const sel = window.getSelection();
-      if (sel) { sel.selectAllChildren(el); }
+      if (sel) sel.selectAllChildren(el);
     });
     return () => cancelAnimationFrame(id);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -157,8 +165,7 @@ function TextItemEditor({ item, initialValue, onCommit }: TextItemEditorProps) {
   const doCommit = useCallback(() => {
     if (doneRef.current) return;
     doneRef.current = true;
-    const text = ref.current?.textContent ?? "";
-    onCommit(text);
+    onCommit(ref.current?.textContent ?? "");
   }, [onCommit]);
 
   return (
@@ -184,10 +191,14 @@ function TextItemEditor({ item, initialValue, onCommit }: TextItemEditorProps) {
         top: 0,
         minWidth: Math.max(item.screenWidth, 60),
         minHeight: item.screenHeight,
-        font: item.cssFont,
+        // Set each property individually — NOT the font shorthand
+        fontFamily: item.fontFamily,
+        fontWeight: item.fontWeight,
+        fontStyle: item.fontStyle,
+        fontSize: `${item.screenFontSize}px`,
         color: item.color,
         lineHeight: `${item.screenHeight}px`,
-        background: "rgba(255,255,255,0.95)",
+        background: "rgba(255,255,255,0.97)",
         borderBottom: "2px solid #3b82f6",
         outline: "2px solid rgba(59,130,246,0.4)",
         outlineOffset: 1,
@@ -197,6 +208,7 @@ function TextItemEditor({ item, initialValue, onCommit }: TextItemEditorProps) {
         boxSizing: "border-box",
         whiteSpace: "nowrap",
         cursor: "text",
+        letterSpacing: "inherit",
       }}
     />
   );
@@ -417,7 +429,7 @@ export default function PdfViewer({
       if (pdfCanvas) canvasCtx = pdfCanvas.getContext("2d", { willReadFrequently: true });
 
       // Import font resolver
-      const { resolvePdfFont, preloadFonts, buildCssFont } = await import("@/lib/pdf-fonts");
+      const { resolvePdfFont, preloadFonts, buildCanvasFont } = await import("@/lib/pdf-fonts");
 
       const items: PdfTextItem[] = [];
       const fontInfos: { family: string; weight: "normal" | "bold"; style: "normal" | "italic"; googleFamily?: string; generic: string }[] = [];
@@ -446,7 +458,7 @@ export default function PdfViewer({
         const pdfjsFamily = pdfjsStyle.fontFamily ?? "";
         const fontInfo    = resolvePdfFont(ti.fontName, pdfjsFamily, pdfjsStyle.fontWeight);
         fontInfos.push(fontInfo);
-        const cssFont = buildCssFont(screenFontSize, fontInfo);
+        const cssFont = buildCanvasFont(screenFontSize, fontInfo);
 
         // Sample text color from the rendered canvas (center of text area)
         let color = "#000000";
@@ -898,8 +910,12 @@ export default function PdfViewer({
                       width: "100%",
                       height: "100%",
                       background: "white",
-                      font: item.cssFont,
+                      fontFamily: item.fontFamily,
+                      fontWeight: item.fontWeight,
+                      fontStyle: item.fontStyle,
+                      fontSize: `${item.screenFontSize}px`,
                       color: item.color,
+                      lineHeight: `${item.screenHeight}px`,
                       display: "flex",
                       alignItems: "center",
                       cursor: "text",
