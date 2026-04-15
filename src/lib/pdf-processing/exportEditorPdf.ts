@@ -287,30 +287,40 @@ export async function exportEditorPdf(opts: ExportOptions): Promise<Blob> {
     if (pageEdits.length > 0) {
       for (const edit of pageEdits) {
         if (!edit.newText) continue;
-        // Convert PDF coordinates to canvas pixel coordinates using export viewport
-        const [bx, by] = viewport.convertToViewportPoint(edit.pdfX, edit.pdfY);
-        const [tx, ty] = viewport.convertToViewportPoint(
+
+        // Convert all 4 corners of the text area to viewport (canvas) coordinates
+        // Baseline-left (where text starts drawing)
+        const [blX, blY] = viewport.convertToViewportPoint(edit.pdfX, edit.pdfY);
+        // Top-right (pdfY + fontSize in PDF space = top of glyphs)
+        const [trX, trY] = viewport.convertToViewportPoint(
           edit.pdfX + edit.pdfWidth,
           edit.pdfY + edit.pdfFontSize,
         );
-        const left   = Math.min(bx, tx) - 1;
-        const top    = Math.min(by, ty) - 2;
-        const width  = Math.abs(tx - bx) + 2;
-        const height = Math.abs(by - ty) + 4;
 
-        // Cover original text with a white rectangle
+        const left   = Math.min(blX, trX);
+        const top    = Math.min(blY, trY);
+        const right  = Math.max(blX, trX);
+        const bottom = Math.max(blY, trY);
+        const width  = right - left;
+        const height = bottom - top;
+
+        // Cover original text with generous padding
+        ctx.save();
         ctx.fillStyle = "#ffffff";
-        ctx.fillRect(left, top, width, height);
+        ctx.fillRect(left - 2, top - 2, width + 4, height + 4);
 
-        // Rebuild the CSS font string matching the original typography
-        const fontSize   = Math.max(height * 0.9, 8);
-        const fStyle     = edit.fontStyle  === "italic" ? "italic "  : "";
-        const fWeight    = edit.fontWeight === "bold"   ? "bold "    : "";
-        const fFamily    = edit.fontFamily || "sans-serif";
-        ctx.font         = `${fStyle}${fWeight}${fontSize}px ${fFamily}`;
+        // Use the actual PDF font size scaled to export canvas
+        const exportFontSize = edit.pdfFontSize * EXPORT_SCALE;
+        const fStyle  = edit.fontStyle  === "italic" ? "italic "  : "";
+        const fWeight = edit.fontWeight === "bold"   ? "bold "    : "";
+        const fFamily = edit.fontFamily || "sans-serif";
+
+        ctx.font         = `${fStyle}${fWeight}${exportFontSize}px ${fFamily}`;
         ctx.fillStyle    = "#000000";
         ctx.textBaseline = "alphabetic";
-        ctx.fillText(edit.newText, bx, by, width + 20);
+        // blX/blY is the baseline-left point at export scale
+        ctx.fillText(edit.newText, blX, blY);
+        ctx.restore();
       }
     }
 

@@ -164,8 +164,6 @@ function TextItemEditor({ item, initialValue, onCommit }: TextItemEditorProps) {
     onCommit(valueRef.current);
   }, [onCommit]);
 
-  const fontSize = Math.max(item.screenHeight * 0.9, 8);
-
   return (
     <input
       // eslint-disable-next-line jsx-a11y/no-autofocus
@@ -189,12 +187,9 @@ function TextItemEditor({ item, initialValue, onCommit }: TextItemEditorProps) {
         left: 0,
         top: 0,
         width: Math.max(item.screenWidth * 1.5, 150),
-        height: Math.max(item.screenHeight, 22),
-        fontSize,
-        fontFamily: item.fontFamily || "sans-serif",
-        fontWeight: item.fontWeight,
-        fontStyle: item.fontStyle,
-        lineHeight: `${Math.max(item.screenHeight, 22)}px`,
+        height: Math.max(item.screenHeight + 4, 22),
+        font: item.cssFont,
+        lineHeight: `${Math.max(item.screenHeight + 4, 22)}px`,
         background: "white",
         border: "2px solid #3b82f6",
         borderRadius: 3,
@@ -435,7 +430,9 @@ export default function PdfViewer({
         const screenTop    = Math.min(by, ty);
         const screenWidth  = Math.max(Math.abs(tx - bx), 8);
         const screenHeight = Math.max(Math.abs(by - ty), 8);
-        const fontSize     = Math.max(screenHeight * 0.9, 8);
+
+        // Use the real PDF font size scaled to CSS pixels (not height heuristic)
+        const fontSize     = Math.max(fontSizePdf * cssScale, 6);
 
         // Resolve typography from pdfjs styles + font name heuristics
         const rawFamily   = styles[ti.fontName]?.fontFamily ?? "";
