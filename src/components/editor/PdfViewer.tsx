@@ -405,8 +405,11 @@ export default function PdfViewer({
       const tc = await pdfPage.getTextContent();
       if (cancelled) return;
 
-      // pdfjs exposes resolved font families in textContent.styles
-      const styles = (tc as { items: unknown[]; styles: Record<string, { fontFamily: string }> }).styles ?? {};
+      // pdfjs exposes resolved font info in textContent.styles
+      const styles = (tc as {
+        items: unknown[];
+        styles: Record<string, { fontFamily?: string; fontWeight?: string | number; ascent?: number; descent?: number }>;
+      }).styles ?? {};
 
       // Detect dominant text color by sampling the rendered canvas
       const pdfCanvas = pdfCanvasRef.current;
@@ -438,9 +441,10 @@ export default function PdfViewer({
         const screenHeight = Math.max(Math.abs(by - ty), 8);
         const screenFontSize = Math.max(fontSizePdf * cssScale, 6);
 
-        // Resolve font info
-        const pdfjsFamily = styles[ti.fontName]?.fontFamily ?? "";
-        const fontInfo    = resolvePdfFont(ti.fontName, pdfjsFamily);
+        // Resolve font info using pdfjs styles + font name heuristics
+        const pdfjsStyle  = styles[ti.fontName] ?? {};
+        const pdfjsFamily = pdfjsStyle.fontFamily ?? "";
+        const fontInfo    = resolvePdfFont(ti.fontName, pdfjsFamily, pdfjsStyle.fontWeight);
         fontInfos.push(fontInfo);
         const cssFont = buildCssFont(screenFontSize, fontInfo);
 

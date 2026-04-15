@@ -73,8 +73,19 @@ function detectWeightStyle(raw: string): { weight: "normal" | "bold"; style: "no
 }
 
 /** Resolve a PDF internal font name to a full FontInfo */
-export function resolvePdfFont(rawFontName: string, pdfjsFamily?: string): FontInfo {
-  const { weight, style } = detectWeightStyle(rawFontName);
+export function resolvePdfFont(
+  rawFontName: string,
+  pdfjsFamily?: string,
+  pdfjsFontWeight?: string | number,
+): FontInfo {
+  let { weight, style } = detectWeightStyle(rawFontName);
+
+  // Also check the weight exposed by pdfjs styles (more reliable for some PDFs)
+  if (pdfjsFontWeight) {
+    const fw = String(pdfjsFontWeight).toLowerCase();
+    if (fw === "bold" || Number(fw) >= 600) weight = "bold";
+  }
+
   const cleaned = cleanFontName(rawFontName).toLowerCase();
 
   // Try exact match in our map
