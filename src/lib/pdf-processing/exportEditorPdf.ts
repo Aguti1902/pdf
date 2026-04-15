@@ -42,10 +42,23 @@ export interface ExportTextBox {
   page?: number;
 }
 
+/** A native-text edit to apply during export */
+export interface ExportTextEdit {
+  id: string;
+  page: number;
+  originalText: string;
+  newText: string;
+  pdfX: number;
+  pdfY: number;
+  pdfFontSize: number;
+  pdfWidth: number;
+}
+
 export interface ExportOptions {
   pdfFile: File;
   annotations: ExportAnnotation[];
   textBoxes: ExportTextBox[];
+  textEdits?: ExportTextEdit[];
   /** Page rotation in degrees (applied to all pages for now) */
   pageRotation: number;
   /** Pages that were deleted in the editor (1-indexed) */
@@ -223,7 +236,7 @@ function drawTextBoxesOnCtx(
 }
 
 export async function exportEditorPdf(opts: ExportOptions): Promise<Blob> {
-  const { pdfFile, annotations, textBoxes, pageRotation, deletedPages } = opts;
+  const { pdfFile, annotations, textBoxes, textEdits = [], pageRotation, deletedPages } = opts;
 
   const [pdfjsModule, { PDFDocument }] = await Promise.all([
     import("pdfjs-dist") as Promise<typeof import("pdfjs-dist")>,
@@ -265,6 +278,35 @@ export async function exportEditorPdf(opts: ExportOptions): Promise<Blob> {
 
     // Draw text boxes
     drawTextBoxesOnCtx(ctx, pageBoxes, EXPORT_SCALE);
+
+    // Apply native text edits: cover original text + write new text
+    const pageEdits = textEdits.filter(e => e.page === pageNum);
+    if (pageEdits.length > 0) {
+      for (const edit of pageEdits) {
+        if (!edit.newText) continue;
+        // Convert PDF coordinates to canvas pixel coordinates using export viewport
+        const [bx, by] = viewport.convertToViewportPoint(edit.pdfX, edit.pdfY);
+        const [tx, ty] = viewport.convertToViewportPoint(
+          edit.pdfX + edit.pdfWidth,
+          edit.pdfY + edit.pdfFontSize,
+        );
+        const left   = Math.min(bx, tx) - 1;
+        const top    = Math.min(by, ty) - 2;
+        const width  = Math.abs(tx - bx) + 2;
+        const height = Math.abs(by - ty) + 4;
+
+        // Cover original text
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(left, top, width, height);
+
+        // Write new text at baseline position (bx, by)
+        const fontSize = Math.max(height * 0.82, 8);
+        ctx.font = `${fontSize}px sans-serif`;
+        ctx.fillStyle = "#000000";
+        ctx.textBaseline = "alphabetic";
+        ctx.fillText(edit.newText, bx, by, width + 10);
+      }
+    }
 
     // Convert canvas to PNG bytes
     const pngBlob = await new Promise<Blob>((resolve, reject) => {

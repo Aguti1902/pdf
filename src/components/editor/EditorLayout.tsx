@@ -14,12 +14,12 @@ import {
   Highlighter, Image as ImageIcon, Trash2, ArrowLeft,
   RotateCw, Eraser, MousePointer2, Shapes, Upload, Share2, Loader2,
   Minus, ArrowRight, Underline, Strikethrough,
-  Circle, Triangle, Diamond,
+  Circle, Triangle, Diamond, TextCursor,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePdfEditor } from "@/hooks/usePdfEditor";
 import type { ToolAction } from "@/types";
-import type { Annotation, PdfViewerProps, TextBox, LiveLine } from "./PdfViewer";
+import type { Annotation, PdfViewerProps, TextBox, LiveLine, TextEdit } from "./PdfViewer";
 import { hitTest } from "./PdfViewer";
 import { PaywallModal } from "@/components/checkout/PaywallModal";
 import { SignatureModal } from "./SignatureModal";
@@ -30,7 +30,7 @@ const PdfViewer = dynamic<PdfViewerProps>(() => import("./PdfViewer"), { ssr: fa
 
 // ─── Tool icons (static) ───────────────────────────────────────────────────────
 const TOOL_ICON_MAP: Record<ToolAction, React.ElementType> = {
-  pointer: MousePointer2, "add-text": Type, draw: Pencil, highlight: Highlighter,
+  pointer: MousePointer2, "add-text": Type, "text-edit": TextCursor, draw: Pencil, highlight: Highlighter,
   shapes: Shapes, eraser: Eraser, sign: PenLine, "add-image": ImageIcon,
   rotate: RotateCw, "delete-page": Trash2,
   line: Minus, arrow: ArrowRight, underline: Underline, strikethrough: Strikethrough,
@@ -38,7 +38,7 @@ const TOOL_ICON_MAP: Record<ToolAction, React.ElementType> = {
 };
 
 const CURSORS: Partial<Record<ToolAction, string>> = {
-  "add-text": "text", sign: "crosshair", draw: "crosshair",
+  "add-text": "text", "text-edit": "text", sign: "crosshair", draw: "crosshair",
   highlight: "crosshair", shapes: "crosshair", "add-image": "copy",
   eraser: "cell", pointer: "default",
   line: "crosshair", arrow: "crosshair", underline: "crosshair", strikethrough: "crosshair",
@@ -59,8 +59,9 @@ export function EditorLayout() {
       {
         group: editorT?.groupEdit ?? "Edit",
         items: [
-          { action: "pointer"   as ToolAction, icon: TOOL_ICON_MAP.pointer,    label: tr?.pointer   ?? "Select / Move", desc: tr?.pointerDesc   ?? "Select and move elements" },
-          { action: "add-text"  as ToolAction, icon: TOOL_ICON_MAP["add-text"], label: tr?.addText   ?? "Add Text",      desc: tr?.addTextDesc   ?? "Click to add a text box" },
+          { action: "pointer"   as ToolAction, icon: TOOL_ICON_MAP.pointer,      label: tr?.pointer    ?? "Select / Move",  desc: tr?.pointerDesc   ?? "Select and move elements" },
+          { action: "add-text"  as ToolAction, icon: TOOL_ICON_MAP["add-text"],  label: tr?.addText    ?? "Add Text",       desc: tr?.addTextDesc   ?? "Click to add a text box" },
+          { action: "text-edit" as ToolAction, icon: TOOL_ICON_MAP["text-edit"], label: tr?.textEdit   ?? "Edit Text",      desc: tr?.textEditDesc  ?? "Click on any existing text to edit it inline" },
           { action: "draw"          as ToolAction, icon: TOOL_ICON_MAP.draw,          label: tr?.draw          ?? "Draw",           desc: tr?.drawDesc          ?? "Freehand drawing" },
           { action: "highlight"     as ToolAction, icon: TOOL_ICON_MAP.highlight,     label: tr?.highlight     ?? "Highlight",      desc: tr?.highlightDesc     ?? "Highlight areas" },
           { action: "underline"     as ToolAction, icon: TOOL_ICON_MAP.underline,     label: tr?.underline     ?? "Underline",      desc: tr?.underlineDesc     ?? "Draw underline" },
@@ -106,12 +107,13 @@ export function EditorLayout() {
   const [history,     setHistory]     = useState<Annotation[][]>([[]]);
   const [historyIdx,  setHistoryIdx]  = useState(0);
   const [liveStroke,  setLiveStroke]  = useState<{ points: {x:number;y:number}[]; color:string; size:number } | null>(null);
-  const [liveRect,    setLiveRect]    = useState<{ x:number;y:number;w:number;h:number;color:string;type:"highlight"|"shape";size:number } | null>(null);
+  const [liveRect,    setLiveRect]    = useState<{ x:number;y:number;w:number;h:number;color:string;type:"highlight"|"shape"|"ellipse"|"triangle"|"diamond"|"underline"|"strikethrough";size:number } | null>(null);
   const [textBoxes,        setTextBoxes]        = useState<TextBox[]>([]);
   const [activeTextBoxId,  setActiveTextBoxId]  = useState<string | null>(null);
   const [selectedTextBoxId,setSelectedTextBoxId]= useState<string | null>(null);
   const [selectedId,       setSelectedId]       = useState<string | null>(null);
   const [liveLine,         setLiveLine]         = useState<LiveLine | null>(null);
+  const [textEdits,        setTextEdits]        = useState<TextEdit[]>([]);
 
   // Tool options
   const [toolColor, setToolColor] = useState("#EF4444");
@@ -209,7 +211,7 @@ export function EditorLayout() {
 
     // Pre-select tool if provided via URL (e.g. from tool landing pages)
     if (toolParam) {
-      const validTools = ["pointer","add-text","draw","highlight","shapes","ellipse","triangle","diamond","eraser","line","arrow","underline","strikethrough","sign","add-image","rotate","delete-page"];
+      const validTools = ["pointer","add-text","text-edit","draw","highlight","shapes","ellipse","triangle","diamond","eraser","line","arrow","underline","strikethrough","sign","add-image","rotate","delete-page"];
       if (validTools.includes(toolParam)) {
         setTimeout(() => setActiveTool(toolParam as import("@/types").ToolAction), 200);
       }
@@ -489,6 +491,20 @@ export function EditorLayout() {
     setSelectedTextBoxId(null);
   }, []);
 
+  // ── Native text edit handlers ──────────────────────────────────────────────
+  const handleTextEditCommit = useCallback((edit: TextEdit) => {
+    setTextEdits(prev => {
+      const filtered = prev.filter(e => e.id !== edit.id);
+      // If new text is same as original, treat as deletion (restore)
+      if (edit.newText.trim() === edit.originalText.trim()) return filtered;
+      return [...filtered, edit];
+    });
+  }, []);
+
+  const handleTextEditDelete = useCallback((editId: string) => {
+    setTextEdits(prev => prev.filter(e => e.id !== editId));
+  }, []);
+
   // ── Page ops ──────────────────────────────────────────────────────────────────
   const rotatePage = () => setPageRotation(r => (r + 90) % 360);
   const deletePage = () => {
@@ -550,7 +566,7 @@ export function EditorLayout() {
     setIsExporting(true);
     try {
       const { exportEditorPdf } = await import("@/lib/pdf-processing/exportEditorPdf");
-      const blob = await exportEditorPdf({ pdfFile, annotations, textBoxes, pageRotation, deletedPages });
+      const blob = await exportEditorPdf({ pdfFile, annotations, textBoxes, textEdits, pageRotation, deletedPages });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url; a.download = fileName; a.click();
@@ -737,6 +753,10 @@ export function EditorLayout() {
                   onTextBoxMove={handleTextBoxMove}
                   onTextBoxActivate={handleTextBoxActivate}
                   onRotateStart={handleRotateStart}
+                  tool={editorState.activeTool ?? "pointer"}
+                  textEdits={textEdits.filter(e => e.page === editorState.currentPage)}
+                  onTextEditCommit={handleTextEditCommit}
+                  onTextEditDelete={handleTextEditDelete}
                 />
               </div>
             ) : (
@@ -896,6 +916,14 @@ function ToolOptions({ tool, color, size, selectedId, onColorChange, onSizeChang
       {tool === "add-text" && (
         <div className="rounded-lg border bg-muted/40 p-2.5 text-muted-foreground leading-relaxed">
           Click on the document where you want to add text. Press <span className="inline-flex items-center rounded border border-border bg-background px-1.5 py-0.5 font-mono text-[10px] font-medium shadow-sm">Esc</span> to confirm.
+        </div>
+      )}
+
+      {tool === "text-edit" && (
+        <div className="rounded-lg border bg-blue-50 p-2.5 text-muted-foreground leading-relaxed space-y-1.5">
+          <p className="font-medium text-blue-800 text-[11px]">✏️ Editar texto del PDF</p>
+          <p className="text-[10px] leading-relaxed">Pasa el cursor sobre el texto existente para ver los elementos. Haz <strong>clic</strong> en cualquier texto para editarlo.</p>
+          <p className="text-[10px] text-muted-foreground">Pulsa <span className="inline-flex items-center rounded border bg-background px-1 py-0.5 font-mono text-[9px] shadow-sm">Enter</span> o <span className="inline-flex items-center rounded border bg-background px-1 py-0.5 font-mono text-[9px] shadow-sm">Esc</span> para confirmar.</p>
         </div>
       )}
 

@@ -18,6 +18,36 @@ export interface LiveLine { x1: number; y1: number; x2: number; y2: number; colo
 
 export interface TextBox { id: string; x: number; y: number; value: string; color: string; placeholder?: string; rotation?: number; page?: number; }
 
+// ─── Native PDF text editing ──────────────────────────────────────────────────
+
+/** One text run extracted from a PDF page via pdfjs getTextContent() */
+export interface PdfTextItem {
+  id: string;           // `${page}-${index}`
+  page: number;
+  str: string;
+  pdfX: number;         // PDF user-space x (origin bottom-left)
+  pdfY: number;         // PDF user-space y (baseline)
+  pdfFontSize: number;  // font size in PDF user units
+  pdfWidth: number;     // text width in PDF user units
+  fontName: string;
+  screenLeft: number;   // CSS px position at current zoom
+  screenTop: number;
+  screenWidth: number;
+  screenHeight: number;
+}
+
+/** A committed edit to a native PDF text item */
+export interface TextEdit {
+  id: string;           // matches PdfTextItem.id
+  page: number;
+  originalText: string;
+  newText: string;
+  pdfX: number;
+  pdfY: number;
+  pdfFontSize: number;
+  pdfWidth: number;
+}
+
 export interface PdfViewerProps {
   url: string;
   page: number;
@@ -42,6 +72,11 @@ export interface PdfViewerProps {
   onTextBoxMove?: (id: string, x: number, y: number) => void;
   onTextBoxActivate?: (id: string) => void;
   onRotateStart?: (id: string, cx: number, cy: number) => void;
+  // Native text editing
+  tool?: string;
+  textEdits?: TextEdit[];
+  onTextEditCommit?: (edit: TextEdit) => void;
+  onTextEditDelete?: (editId: string) => void;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -81,6 +116,58 @@ function drawRotated(ctx: CanvasRenderingContext2D, rad: number, cx: number, cy:
   ctx.translate(-cx, -cy);
   fn();
   ctx.restore();
+}
+
+// ─── TextItemEditor — inline editor for native PDF text ──────────────────────
+interface TextItemEditorProps {
+  item: PdfTextItem;
+  initialValue: string;
+  onCommit: (value: string) => void;
+}
+function TextItemEditor({ item, initialValue, onCommit }: TextItemEditorProps) {
+  const ref = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const id = requestAnimationFrame(() => { el.focus(); el.select(); });
+    return () => cancelAnimationFrame(id);
+  }, []);
+
+  return (
+    <input
+      ref={ref}
+      defaultValue={initialValue}
+      onBlur={e => onCommit(e.target.value)}
+      onKeyDown={e => {
+        if (e.key === "Enter" || e.key === "Escape") {
+          onCommit(e.currentTarget.value);
+          e.preventDefault();
+        }
+        e.stopPropagation();
+      }}
+      onMouseDown={e => e.stopPropagation()}
+      onMouseMove={e => e.stopPropagation()}
+      onMouseUp={e => e.stopPropagation()}
+      style={{
+        position: "absolute",
+        left: 0,
+        top: 0,
+        width: Math.max(item.screenWidth * 1.5, 120),
+        height: item.screenHeight,
+        fontSize: Math.max(item.screenHeight * 0.82, 10),
+        fontFamily: "sans-serif",
+        background: "white",
+        border: "2px solid #3b82f6",
+        borderRadius: 2,
+        padding: "0 4px",
+        outline: "none",
+        boxShadow: "0 2px 10px rgba(0,0,0,0.18)",
+        zIndex: 50,
+        boxSizing: "border-box",
+      }}
+    />
+  );
 }
 
 // ─── PlacedTextBox — rendered after confirming text; draggable with pointer ───
@@ -223,6 +310,7 @@ export default function PdfViewer({
   onPdfLoaded, onMouseDown, onMouseMove, onMouseUp,
   onTextBoxBlur, onTextBoxDelete, onTextBoxSelect, onTextBoxMove, onTextBoxActivate,
   onRotateStart,
+  tool, textEdits = [], onTextEditCommit, onTextEditDelete,
 }: PdfViewerProps) {
   const pdfCanvasRef = useRef<HTMLCanvasElement>(null);
   const annCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -231,6 +319,10 @@ export default function PdfViewer({
   const pdfRef = useRef<pdfjsLib.PDFDocumentProxy | null>(null);
   const renderTaskRef = useRef<pdfjsLib.RenderTask | null>(null);
   const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
+
+  // ── Native text extraction ─────────────────────────────────────────────────
+  const [extractedItems, setExtractedItems] = useState<PdfTextItem[]>([]);
+  const [editingItemId, setEditingItemId]   = useState<string | null>(null);
 
   // Load PDF
   useEffect(() => {
@@ -265,6 +357,62 @@ export default function PdfViewer({
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, page, zoom, url, pageRotation]);
+
+  // Extract text items for "text-edit" mode
+  useEffect(() => {
+    if (tool !== "text-edit") { setExtractedItems([]); setEditingItemId(null); return; }
+    const pdf = pdfRef.current;
+    if (!pdf || loading) return;
+    let cancelled = false;
+
+    const pageNum = Math.min(Math.max(1, page), pdf.numPages);
+    pdf.getPage(pageNum).then(async pdfPage => {
+      if (cancelled) return;
+      const cssScale = zoom / 100;
+      const cssVp = pdfPage.getViewport({ scale: cssScale, rotation: pageRotation % 360 });
+      const tc = await pdfPage.getTextContent();
+      if (cancelled) return;
+
+      const items: PdfTextItem[] = [];
+      let idx = 0;
+      for (const raw of tc.items) {
+        if (!("str" in raw)) continue;
+        const ti = raw as { str: string; transform: number[]; width: number; fontName: string };
+        if (!ti.str?.trim()) continue;
+
+        const [a, b, , , e, f] = ti.transform;
+        const fontSizePdf = Math.sqrt(a * a + b * b) || 12;
+        const widthPdf = ti.width > 0 ? ti.width : fontSizePdf * ti.str.length * 0.55;
+
+        // Baseline point
+        const [bx, by] = cssVp.convertToViewportPoint(e, f);
+        // Top-right of text cell (PDF y goes up, so f+fontSize is higher = smaller screenY)
+        const [tx, ty] = cssVp.convertToViewportPoint(e + widthPdf, f + fontSizePdf);
+
+        const screenLeft   = Math.min(bx, tx);
+        const screenTop    = Math.min(by, ty);
+        const screenWidth  = Math.max(Math.abs(tx - bx), 8);
+        const screenHeight = Math.max(Math.abs(by - ty), 8);
+
+        items.push({
+          id: `${pageNum}-${idx}`,
+          page: pageNum,
+          str: ti.str,
+          pdfX: e, pdfY: f,
+          pdfFontSize: fontSizePdf,
+          pdfWidth: widthPdf,
+          fontName: ti.fontName ?? "",
+          screenLeft, screenTop, screenWidth, screenHeight,
+        });
+        idx++;
+      }
+      setExtractedItems(items);
+      setEditingItemId(null);
+    }).catch(() => {});
+
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tool, page, zoom, pageRotation, loading]);
 
   // Draw annotations + selection handles
   useEffect(() => {
@@ -628,6 +776,114 @@ export default function PdfViewer({
           />
         )
       )}
+      {/* ── Native text edit overlay ── */}
+      {tool === "text-edit" && extractedItems.length > 0 && (
+        <div className="absolute inset-0 z-40">
+          {extractedItems.map(item => {
+            const committedEdit = textEdits.find(e => e.id === item.id);
+            const isEditing = editingItemId === item.id;
+
+            return (
+              <div
+                key={item.id}
+                style={{
+                  position: "absolute",
+                  left: item.screenLeft,
+                  top: item.screenTop,
+                  width: item.screenWidth,
+                  height: item.screenHeight,
+                }}
+              >
+                {isEditing ? (
+                  <TextItemEditor
+                    item={item}
+                    initialValue={committedEdit?.newText ?? item.str}
+                    onCommit={newText => {
+                      setEditingItemId(null);
+                      if (newText.trim() === item.str.trim() && !committedEdit) return;
+                      if (committedEdit && newText === committedEdit.newText) return;
+                      onTextEditCommit?.({
+                        id: item.id,
+                        page: item.page,
+                        originalText: item.str,
+                        newText,
+                        pdfX: item.pdfX,
+                        pdfY: item.pdfY,
+                        pdfFontSize: item.pdfFontSize,
+                        pdfWidth: item.pdfWidth,
+                      });
+                    }}
+                  />
+                ) : committedEdit ? (
+                  /* Show edited text with white background (hides original canvas text) */
+                  <div
+                    title="Haz clic para editar"
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      background: "white",
+                      fontSize: Math.max(item.screenHeight * 0.82, 8),
+                      fontFamily: "sans-serif",
+                      display: "flex",
+                      alignItems: "center",
+                      cursor: "text",
+                      userSelect: "none",
+                      borderBottom: "2px solid #3b82f6",
+                      paddingLeft: 2,
+                      overflow: "hidden",
+                      whiteSpace: "nowrap",
+                    }}
+                    onClick={() => setEditingItemId(item.id)}
+                    onMouseDown={e => e.stopPropagation()}
+                    onMouseMove={e => e.stopPropagation()}
+                    onMouseUp={e => e.stopPropagation()}
+                  >
+                    {committedEdit.newText}
+                  </div>
+                ) : (
+                  /* Transparent hover target over original text */
+                  <div
+                    title={`"${item.str.length > 40 ? item.str.slice(0, 40) + "…" : item.str}" — clic para editar`}
+                    className="hover:bg-blue-200/25 hover:ring-1 hover:ring-blue-400/60 rounded-[1px] transition-colors"
+                    style={{ width: "100%", height: "100%", cursor: "text" }}
+                    onClick={() => setEditingItemId(item.id)}
+                    onMouseDown={e => e.stopPropagation()}
+                    onMouseMove={e => e.stopPropagation()}
+                    onMouseUp={e => e.stopPropagation()}
+                  />
+                )}
+                {/* Delete edit button */}
+                {committedEdit && !isEditing && (
+                  <button
+                    title="Restaurar texto original"
+                    style={{
+                      position: "absolute",
+                      top: -8,
+                      right: -8,
+                      width: 16,
+                      height: 16,
+                      borderRadius: "50%",
+                      background: "#ef4444",
+                      color: "white",
+                      fontSize: 10,
+                      fontWeight: "bold",
+                      border: "none",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      zIndex: 55,
+                    }}
+                    onMouseDown={e => e.stopPropagation()}
+                    onClick={e => { e.stopPropagation(); onTextEditDelete?.(item.id); }}
+                  >×</button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       {!loading && (
         <div className="pointer-events-none absolute bottom-3 right-3 rounded-full bg-black/50 px-2.5 py-1 text-xs text-white">
           p. {page}

@@ -64,6 +64,7 @@ export type FileUploadState =
 export type ToolAction =
   | "pointer"
   | "add-text"
+  | "text-edit"
   | "draw"
   | "highlight"
   | "shapes"
