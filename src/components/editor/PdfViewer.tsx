@@ -144,28 +144,42 @@ interface TextItemEditorProps {
   onCommit: (value: string) => void;
 }
 function TextItemEditor({ item, initialValue, onCommit }: TextItemEditorProps) {
-  const ref = useRef<HTMLInputElement>(null);
+  const ref       = useRef<HTMLInputElement>(null);
+  const valueRef  = useRef<string>(initialValue);   // always current value
+  const doneRef   = useRef(false);                  // guard against double-commit
 
+  // Reliable focus: autoFocus + RAF fallback
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
+    el.focus();
+    el.select();
     const id = requestAnimationFrame(() => { el.focus(); el.select(); });
     return () => cancelAnimationFrame(id);
   }, []);
+
+  const doCommit = useCallback(() => {
+    if (doneRef.current) return;
+    doneRef.current = true;
+    onCommit(valueRef.current);
+  }, [onCommit]);
 
   const fontSize = Math.max(item.screenHeight * 0.9, 8);
 
   return (
     <input
+      // eslint-disable-next-line jsx-a11y/no-autofocus
+      autoFocus
       ref={ref}
       defaultValue={initialValue}
-      onBlur={e => onCommit(e.target.value)}
+      onChange={e => { valueRef.current = e.target.value; }}
+      onBlur={doCommit}
       onKeyDown={e => {
-        if (e.key === "Enter" || e.key === "Escape") {
-          onCommit(e.currentTarget.value);
-          e.preventDefault();
-        }
         e.stopPropagation();
+        if (e.key === "Enter" || e.key === "Escape") {
+          e.preventDefault();
+          doCommit();
+        }
       }}
       onMouseDown={e => e.stopPropagation()}
       onMouseMove={e => e.stopPropagation()}
@@ -174,21 +188,22 @@ function TextItemEditor({ item, initialValue, onCommit }: TextItemEditorProps) {
         position: "absolute",
         left: 0,
         top: 0,
-        width: Math.max(item.screenWidth * 1.5, 120),
-        height: item.screenHeight,
+        width: Math.max(item.screenWidth * 1.5, 150),
+        height: Math.max(item.screenHeight, 22),
         fontSize,
         fontFamily: item.fontFamily || "sans-serif",
         fontWeight: item.fontWeight,
         fontStyle: item.fontStyle,
-        lineHeight: `${item.screenHeight}px`,
+        lineHeight: `${Math.max(item.screenHeight, 22)}px`,
         background: "white",
         border: "2px solid #3b82f6",
-        borderRadius: 2,
-        padding: "0 4px",
+        borderRadius: 3,
+        padding: "0 6px",
         outline: "none",
-        boxShadow: "0 2px 10px rgba(0,0,0,0.18)",
-        zIndex: 50,
+        boxShadow: "0 4px 16px rgba(59,130,246,0.25)",
+        zIndex: 60,
         boxSizing: "border-box",
+        color: "#111",
       }}
     />
   );
@@ -836,8 +851,7 @@ export default function PdfViewer({
                     initialValue={committedEdit?.newText ?? item.str}
                     onCommit={newText => {
                       setEditingItemId(null);
-                      if (newText.trim() === item.str.trim() && !committedEdit) return;
-                      if (committedEdit && newText === committedEdit.newText) return;
+                      // Always fire the commit so the parent can decide
                       onTextEditCommit?.({
                         id: item.id,
                         page: item.page,

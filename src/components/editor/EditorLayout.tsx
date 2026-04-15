@@ -492,8 +492,8 @@ export function EditorLayout() {
   const handleTextEditCommit = useCallback((edit: TextEdit) => {
     setTextEdits(prev => {
       const filtered = prev.filter(e => e.id !== edit.id);
-      // If new text is same as original, treat as deletion (restore)
-      if (edit.newText.trim() === edit.originalText.trim()) return filtered;
+      // If new text is blank or same as original → restore (no edit stored)
+      if (!edit.newText.trim() || edit.newText.trim() === edit.originalText.trim()) return filtered;
       return [...filtered, edit];
     });
   }, []);
