@@ -286,7 +286,7 @@ export async function exportEditorPdf(opts: ExportOptions): Promise<Blob> {
     // Apply native text edits: cover original text + write new text
     const pageEdits = textEdits.filter(e => e.page === pageNum);
     if (pageEdits.length > 0) {
-      const { loadGoogleFont, waitForFonts, buildCanvasFont } = await import("@/lib/pdf-fonts");
+      const { loadGoogleFont, waitForFonts, buildCanvasFont, isBoldFontAvailable } = await import("@/lib/pdf-fonts");
 
       // Pre-load every Google Font referenced by edits on this page
       const fontFamilies = new Set<string>();
@@ -314,23 +314,38 @@ export async function exportEditorPdf(opts: ExportOptions): Promise<Blob> {
         const height = bottom - top;
 
         ctx.save();
-        // White rectangle covering the original text
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(left - 2, top - 2, width + 4, height + 4);
 
-        // Build canvas font string using exact PDF font size
         const exportFontSize = edit.pdfFontSize * EXPORT_SCALE;
-        const fontStr = buildCanvasFont(exportFontSize, {
+        const isBold = edit.fontWeight === "bold";
+        const fontInfo = {
           family:  edit.fontFamily || "sans-serif",
-          weight:  edit.fontWeight || "normal",
-          style:   edit.fontStyle  || "normal",
+          weight:  (isBold ? "bold" : "normal") as "normal" | "bold",
+          style:   (edit.fontStyle  || "normal") as "normal" | "italic",
           generic: "sans-serif",
-        });
+        };
 
+        const fontStr = buildCanvasFont(exportFontSize, fontInfo);
         ctx.font         = fontStr;
         ctx.fillStyle    = edit.color || "#000000";
         ctx.textBaseline = "alphabetic";
-        ctx.fillText(edit.newText, blX, blY);
+
+        // Verify the bold variant is truly loaded; if not, simulate with stroke
+        const googleFamily = (edit.fontFamily || "").match(/"([^"]+)"/)?.[1];
+        const boldReallyLoaded = !isBold || (googleFamily && isBoldFontAvailable(`"${googleFamily}"`));
+
+        if (isBold && !boldReallyLoaded) {
+          // Faux-bold: fill + thin stroke to thicken glyphs
+          ctx.fillText(edit.newText, blX, blY);
+          ctx.strokeStyle = edit.color || "#000000";
+          ctx.lineWidth = exportFontSize * 0.03;
+          ctx.lineJoin = "round";
+          ctx.strokeText(edit.newText, blX, blY);
+        } else {
+          ctx.fillText(edit.newText, blX, blY);
+        }
+
         ctx.restore();
       }
     }

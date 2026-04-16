@@ -132,7 +132,7 @@ function drawRotated(ctx: CanvasRenderingContext2D, rad: number, cx: number, cy:
 
 // ─── TextItemEditor — inline editor for native PDF text ──────────────────────
 interface TextItemEditorProps {
-  item: PdfTextItem;
+  item: PdfTextItem & { _fauxBold?: boolean };
   initialValue: string;
   onCommit: (value: string) => void;
 }
@@ -145,13 +145,17 @@ function TextItemEditor({ item, initialValue, onCommit }: TextItemEditorProps) {
     if (!el) return;
     el.textContent = initialValue;
 
-    // Force-apply each style property individually to beat Tailwind resets
     el.style.setProperty("font-family", item.fontFamily, "important");
     el.style.setProperty("font-weight", item.fontWeight, "important");
     el.style.setProperty("font-style",  item.fontStyle,  "important");
     el.style.setProperty("font-size",   `${item.screenFontSize}px`, "important");
     el.style.setProperty("color",       item.color, "important");
     el.style.setProperty("line-height", `${item.screenHeight}px`, "important");
+
+    // Faux-bold fallback: thicken glyphs via text-stroke when real bold font unavailable
+    if (item._fauxBold) {
+      el.style.setProperty("-webkit-text-stroke", `${Math.max(0.4, item.screenFontSize * 0.02)}px ${item.color}`, "important");
+    }
 
     const id = requestAnimationFrame(() => {
       el.focus();
@@ -191,7 +195,6 @@ function TextItemEditor({ item, initialValue, onCommit }: TextItemEditorProps) {
         top: 0,
         minWidth: Math.max(item.screenWidth, 60),
         minHeight: item.screenHeight,
-        // Set each property individually — NOT the font shorthand
         fontFamily: item.fontFamily,
         fontWeight: item.fontWeight,
         fontStyle: item.fontStyle,
@@ -209,6 +212,7 @@ function TextItemEditor({ item, initialValue, onCommit }: TextItemEditorProps) {
         whiteSpace: "nowrap",
         cursor: "text",
         letterSpacing: "inherit",
+        ...(item._fauxBold ? { WebkitTextStroke: `${Math.max(0.4, item.screenFontSize * 0.02)}px ${item.color}` } : {}),
       }}
     />
   );
@@ -492,6 +496,18 @@ export default function PdfViewer({
       // Pre-load matching Google Fonts before showing overlays
       await preloadFonts(fontInfos);
       if (cancelled) return;
+
+      // Verify bold variants actually loaded; flag items where it failed
+      const { isBoldFontAvailable } = await import("@/lib/pdf-fonts");
+      for (const item of items) {
+        if (item.fontWeight === "bold") {
+          const gf = item.fontFamily.match(/"([^"]+)"/)?.[1];
+          if (gf && !isBoldFontAvailable(`"${gf}"`)) {
+            // Mark for faux-bold via CSS -webkit-text-stroke
+            (item as PdfTextItem & { _fauxBold?: boolean })._fauxBold = true;
+          }
+        }
+      }
 
       setExtractedItems(items);
       setEditingItemId(null);
@@ -924,6 +940,9 @@ export default function PdfViewer({
                       paddingLeft: 2,
                       overflow: "hidden",
                       whiteSpace: "nowrap",
+                      ...((item as PdfTextItem & { _fauxBold?: boolean })._fauxBold
+                        ? { WebkitTextStroke: `${Math.max(0.4, item.screenFontSize * 0.02)}px ${item.color}` }
+                        : {}),
                     }}
                     onClick={() => setEditingItemId(item.id)}
                     onMouseDown={e => e.stopPropagation()}

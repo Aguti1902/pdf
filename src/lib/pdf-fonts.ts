@@ -3,6 +3,11 @@
  *
  * Maps internal PDF font names (e.g. "BCDEEE+Calibri-Bold") to real
  * CSS font-family names and loads matching Google Fonts on demand.
+ *
+ * Bold detection combines three sources:
+ *   1. fontName string heuristics (e.g. "HelveticaNeueLTStd-Bd")
+ *   2. pdfjs textContent.styles[fontName].fontWeight
+ *   3. CSS @font-face with real bold variant (wght 700)
  */
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -64,21 +69,34 @@ const FONT_MAP: Record<string, { google?: string; generic: string }> = {
   "lucida console": { google: "Source Code Pro", generic: "monospace" },
 };
 
+// ─── Bold / Italic detection patterns ─────────────────────────────────────────
+// Covers standard suffixes AND abbreviated forms used in embedded PDF fonts
+// e.g. "ABCXYZ+HelveticaNeueLTStd-Bd", "ArialMT,BoldItalic", "Calibri-BoldItalic"
+const BOLD_RE = /bold|heavy|black|semibold|demi(?!-?light)|[-_]bd(?:[,\s_-]|$)|w[578900]+/i;
+const ITALIC_RE = /italic|oblique|[-_]it(?:[,\s_-]|$)/i;
+
 // ─── Internal helpers ─────────────────────────────────────────────────────────
 
 function cleanFontName(raw: string): string {
   return raw
     .replace(/^[A-Z]{6}\+/, "")
-    .replace(/[-,](bold|italic|oblique|regular|medium|light|semibold|book|roman|condensed|narrow|extended|heavy|black|thin|extra\s*light)/gi, " ")
+    .replace(/[-,](bold|italic|oblique|regular|medium|light|semibold|book|roman|condensed|narrow|extended|heavy|black|thin|extra\s*light|bd|it)/gi, " ")
     .replace(/\s+/g, " ")
     .trim();
 }
 
-function detectWeightStyle(raw: string): { weight: "normal" | "bold"; style: "normal" | "italic" } {
-  const n = raw.toLowerCase();
+/**
+ * Detect bold / italic from a raw PDF font name + optional pdfjs family string.
+ * Uses expanded regex that covers abbreviated forms like "-Bd", "-It".
+ */
+function detectWeightStyle(
+  rawFontName: string,
+  pdfjsFamily?: string,
+): { weight: "normal" | "bold"; style: "normal" | "italic" } {
+  const combined = `${rawFontName} ${pdfjsFamily ?? ""}`;
   return {
-    weight: /bold|heavy|black|semibold/i.test(n) ? "bold" : "normal",
-    style:  /italic|oblique/i.test(n) ? "italic" : "normal",
+    weight: BOLD_RE.test(combined)   ? "bold"   : "normal",
+    style:  ITALIC_RE.test(combined) ? "italic" : "normal",
   };
 }
 
@@ -89,11 +107,12 @@ export function resolvePdfFont(
   pdfjsFamily?: string,
   pdfjsFontWeight?: string | number,
 ): FontInfo {
-  let { weight, style } = detectWeightStyle(rawFontName);
+  let { weight, style } = detectWeightStyle(rawFontName, pdfjsFamily);
 
+  // pdfjs style.fontWeight overrides when it indicates bold
   if (pdfjsFontWeight) {
     const fw = String(pdfjsFontWeight).toLowerCase();
-    if (fw === "bold" || Number(fw) >= 600) weight = "bold";
+    if (fw === "bold" || fw === "bolder" || Number(fw) >= 600) weight = "bold";
   }
 
   const cleaned = cleanFontName(rawFontName).toLowerCase();
@@ -155,6 +174,11 @@ export function buildCanvasFont(fontSize: number, info: FontInfo): string {
 const loadedFamilies = new Set<string>();
 const loadingPromises = new Map<string, Promise<void>>();
 
+/**
+ * Load a Google Font family with all needed weights (400, 700) and italic variants.
+ * Waits for the browser to actually download + parse the .woff2 files via
+ * document.fonts.ready AND a probing check.
+ */
 export async function loadGoogleFont(family: string, weights?: number[]): Promise<void> {
   if (!family || typeof document === "undefined") return;
   if (loadedFamilies.has(family)) return;
@@ -170,17 +194,19 @@ export async function loadGoogleFont(family: string, weights?: number[]): Promis
     const link = document.createElement("link");
     link.rel = "stylesheet";
     link.href = url;
-    link.onload = () => {
-      // Wait for the browser to actually download and parse the font files
-      if (document.fonts?.ready) {
-        document.fonts.ready.then(() => {
-          loadedFamilies.add(family);
-          resolve();
-        });
-      } else {
-        loadedFamilies.add(family);
-        resolve();
-      }
+    link.onload = async () => {
+      try {
+        await document.fonts.ready;
+        // Probe: try loading explicit FontFace entries so the browser fetches the binary
+        const probes = w.flatMap(wt => [
+          document.fonts.load(`${wt} 16px "${family}"`),
+          document.fonts.load(`italic ${wt} 16px "${family}"`),
+        ]);
+        await Promise.allSettled(probes);
+        await document.fonts.ready;
+      } catch { /* ignore probe errors */ }
+      loadedFamilies.add(family);
+      resolve();
     };
     link.onerror = () => { resolve(); };
     document.head.appendChild(link);
@@ -196,15 +222,23 @@ export async function preloadFonts(infos: FontInfo[]): Promise<void> {
     if (info.googleFamily) families.add(info.googleFamily);
   }
   await Promise.all([...families].map(f => loadGoogleFont(f)));
-  // Final safety: wait for ALL fonts to be ready
-  if (typeof document !== "undefined" && document.fonts?.ready) {
+  if (typeof document !== "undefined") {
     await document.fonts.ready;
   }
 }
 
 /** Wait for fonts to be ready (call before canvas fillText) */
 export async function waitForFonts(): Promise<void> {
-  if (typeof document !== "undefined" && document.fonts?.ready) {
+  if (typeof document !== "undefined") {
     await document.fonts.ready;
   }
+}
+
+/**
+ * Check that the browser actually has a bold variant loaded for the given family.
+ * Useful to verify Google Fonts loaded the 700 wght file.
+ */
+export function isBoldFontAvailable(family: string): boolean {
+  if (typeof document === "undefined") return false;
+  return document.fonts.check(`bold 16px ${family}`);
 }
