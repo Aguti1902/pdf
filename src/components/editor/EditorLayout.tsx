@@ -9,12 +9,13 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
-  Download, ZoomIn, ZoomOut, ChevronLeft, ChevronRight,
+  Download, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, ChevronDown,
   Undo2, Redo2, Save, FileText, Type, PenLine, Pencil,
   Highlighter, Image as ImageIcon, Trash2, ArrowLeft,
   RotateCw, Eraser, MousePointer2, Shapes, Upload, Share2, Loader2,
   Minus, ArrowRight, Underline, Strikethrough,
   Circle, Triangle, Diamond, TextCursor,
+  AlignLeft, AlignCenter, AlignRight, AlignJustify,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePdfEditor } from "@/hooks/usePdfEditor";
@@ -118,6 +119,16 @@ export function EditorLayout() {
   // Tool options
   const [toolColor, setToolColor] = useState("#EF4444");
   const [toolSize,  setToolSize]  = useState(3);
+
+  // Font panel state (for add-text and text-edit tools)
+  const [fontFamily, setFontFamily]       = useState("Helvetica");
+  const [fontSize, setFontSize]           = useState(12);
+  const [fontColor, setFontColor]         = useState("#000000");
+  const [isBold, setIsBold]               = useState(false);
+  const [isItalic, setIsItalic]           = useState(false);
+  const [isUnderlineFp, setIsUnderlineFp] = useState(false);
+  const [bgColor, setBgColor]             = useState("#deded1");
+  const [bgTransparent, setBgTransparent] = useState(true);
 
   // Modals — auth → paywall in sequence
   const [showAuth,      setShowAuth]      = useState(false);
@@ -334,13 +345,13 @@ export function EditorLayout() {
     }
     if (tool === "add-text") {
       const id = crypto.randomUUID();
-      setTextBoxes(prev => [...prev, { id, x, y, value: "", color: toolColor, placeholder: "Type here...", page: currentPageRef.current }]);
+      setTextBoxes(prev => [...prev, { id, x, y, value: "", color: fontColor, placeholder: "Type here...", page: currentPageRef.current }]);
       setActiveTextBoxId(id);
       setSelectedTextBoxId(null);
       setActiveTool("pointer");
     }
     if (tool === "add-image") { pendingImagePos.current = { x, y }; imageInputRef.current?.click(); }
-  }, [editorState.activeTool, toolColor, toolSize, annotations, setActiveTool]);
+  }, [editorState.activeTool, toolColor, toolSize, fontColor, annotations, setActiveTool]);
 
   const handleMouseMove = useCallback((x: number, y: number) => {
     if (!isMouseDown.current && !isRotatingRef.current) return;
@@ -779,7 +790,7 @@ export function EditorLayout() {
         </div>
 
         {/* ── Right panel ── */}
-        <aside className="hidden w-52 shrink-0 flex-col border-l bg-card p-4 lg:flex">
+        <aside className="hidden w-56 shrink-0 flex-col border-l bg-card p-4 lg:flex overflow-y-auto">
           <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             {activeItem ? activeItem.label : "Properties"}
           </h3>
@@ -797,9 +808,17 @@ export function EditorLayout() {
                 setSelectedId(null);
               }}
               onOpenSignModal={() => setShowSignModal(true)}
+              fontFamily={fontFamily} fontSize={fontSize} fontColor={fontColor}
+              isBold={isBold} isItalic={isItalic} isUnderline={isUnderlineFp}
+              bgColor={bgColor} bgTransparent={bgTransparent}
+              onFontFamilyChange={setFontFamily} onFontSizeChange={setFontSize}
+              onFontColorChange={setFontColor}
+              onBoldToggle={() => setIsBold(v => !v)} onItalicToggle={() => setIsItalic(v => !v)}
+              onUnderlineToggle={() => setIsUnderlineFp(v => !v)}
+              onBgColorChange={setBgColor} onBgTransparentToggle={() => setBgTransparent(v => !v)}
             />
           ) : (
-            <p className="text-xs text-muted-foreground">Select a tool from the sidebar to get started.</p>
+            <p className="text-xs text-muted-foreground">Select a tool to get started.</p>
           )}
 
           <div className="mt-auto pt-4">
@@ -848,19 +867,176 @@ export function EditorLayout() {
 // ─── Type alias to silence import-only use ────────────────────────────────────
 type DrawAnnotation = Extract<Annotation, { type: "draw" }>;
 
+// ─── Font families available in the Font panel ───────────────────────────────
+const FONT_FAMILIES = [
+  "Helvetica", "Arial", "Inter", "Times New Roman", "Georgia",
+  "Courier New", "Verdana", "Trebuchet MS", "Calibri", "Cambria",
+  "Palatino", "Garamond", "Roboto", "Open Sans", "Lato",
+  "Montserrat", "Poppins",
+];
+
+// ─── Font Properties Panel (like the reference editor) ────────────────────────
+function FontPanel({ fontFamily, fontSize, fontColor, isBold, isItalic, isUnderline,
+  bgColor, bgTransparent,
+  onFontFamilyChange, onFontSizeChange, onFontColorChange,
+  onBoldToggle, onItalicToggle, onUnderlineToggle,
+  onBgColorChange, onBgTransparentToggle,
+}: {
+  fontFamily: string; fontSize: number; fontColor: string;
+  isBold: boolean; isItalic: boolean; isUnderline: boolean;
+  bgColor: string; bgTransparent: boolean;
+  onFontFamilyChange: (f: string) => void; onFontSizeChange: (s: number) => void;
+  onFontColorChange: (c: string) => void;
+  onBoldToggle: () => void; onItalicToggle: () => void; onUnderlineToggle: () => void;
+  onBgColorChange: (c: string) => void; onBgTransparentToggle: () => void;
+}) {
+  return (
+    <div className="space-y-4 text-xs">
+      {/* ── Font ── */}
+      <div className="space-y-2.5">
+        <div className="flex items-center justify-between">
+          <p className="font-semibold text-[11px]">Font</p>
+          <ChevronDown className="h-3 w-3 text-muted-foreground" />
+        </div>
+        <select
+          value={fontFamily}
+          onChange={e => onFontFamilyChange(e.target.value)}
+          className="w-full rounded-md border bg-background px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+        >
+          {FONT_FAMILIES.map(f => (
+            <option key={f} value={f} style={{ fontFamily: f }}>{f}</option>
+          ))}
+        </select>
+        <div className="flex items-center gap-2">
+          <input
+            type="number"
+            value={fontSize}
+            onChange={e => onFontSizeChange(Math.max(1, Number(e.target.value)))}
+            min={1} max={200}
+            className="w-14 rounded-md border bg-background px-2 py-1.5 text-xs text-center focus:outline-none focus:ring-1 focus:ring-primary"
+          />
+          <div className="flex items-center gap-0.5 rounded-md border bg-background p-0.5">
+            <input type="color" value={fontColor} onChange={e => onFontColorChange(e.target.value)}
+              className="h-6 w-6 cursor-pointer rounded border-none" />
+          </div>
+          <span className="font-mono text-muted-foreground text-[10px]">{fontColor}</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <button onClick={onBoldToggle}
+            className={cn("flex h-7 w-7 items-center justify-center rounded border text-xs font-bold transition-colors",
+              isBold ? "border-primary bg-primary text-primary-foreground" : "bg-background hover:bg-muted")}>
+            B
+          </button>
+          <button onClick={onItalicToggle}
+            className={cn("flex h-7 w-7 items-center justify-center rounded border text-xs italic transition-colors",
+              isItalic ? "border-primary bg-primary text-primary-foreground" : "bg-background hover:bg-muted")}>
+            I
+          </button>
+          <button onClick={onUnderlineToggle}
+            className={cn("flex h-7 w-7 items-center justify-center rounded border text-xs underline transition-colors",
+              isUnderline ? "border-primary bg-primary text-primary-foreground" : "bg-background hover:bg-muted")}>
+            U
+          </button>
+          <Separator orientation="vertical" className="mx-1 h-5" />
+          <button className="flex h-7 w-7 items-center justify-center rounded border bg-background text-xs hover:bg-muted transition-colors" title="Align left">
+            <AlignLeft className="h-3.5 w-3.5" />
+          </button>
+          <button className="flex h-7 w-7 items-center justify-center rounded border bg-background text-xs hover:bg-muted transition-colors" title="Align center">
+            <AlignCenter className="h-3.5 w-3.5" />
+          </button>
+          <button className="flex h-7 w-7 items-center justify-center rounded border bg-background text-xs hover:bg-muted transition-colors" title="Align right">
+            <AlignRight className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
+
+      <Separator />
+
+      {/* ── Paragraph ── */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <p className="font-semibold text-[11px]">Paragraph</p>
+          <ChevronDown className="h-3 w-3 text-muted-foreground" />
+        </div>
+        <div className="flex items-center gap-1">
+          <button className="flex h-7 w-7 items-center justify-center rounded border bg-primary text-primary-foreground text-xs" title="Align left">
+            <AlignLeft className="h-3.5 w-3.5" />
+          </button>
+          <button className="flex h-7 w-7 items-center justify-center rounded border bg-background text-xs hover:bg-muted" title="Align center">
+            <AlignCenter className="h-3.5 w-3.5" />
+          </button>
+          <button className="flex h-7 w-7 items-center justify-center rounded border bg-background text-xs hover:bg-muted" title="Align right">
+            <AlignRight className="h-3.5 w-3.5" />
+          </button>
+          <button className="flex h-7 w-7 items-center justify-center rounded border bg-background text-xs hover:bg-muted" title="Justify">
+            <AlignJustify className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
+
+      <Separator />
+
+      {/* ── Background ── */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <p className="font-semibold text-[11px]">Background</p>
+          <ChevronDown className="h-3 w-3 text-muted-foreground" />
+        </div>
+        <div className="flex items-center gap-2">
+          <input type="color" value={bgColor} onChange={e => onBgColorChange(e.target.value)}
+            className="h-6 w-6 cursor-pointer rounded border" />
+          <span className="font-mono text-muted-foreground text-[10px]">{bgColor}</span>
+        </div>
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" checked={bgTransparent} onChange={onBgTransparentToggle}
+            className="h-3.5 w-3.5 rounded border accent-primary" />
+          <span className="text-[11px]">Transparent</span>
+        </label>
+      </div>
+    </div>
+  );
+}
+
 // ─── Tool Options Panel ───────────────────────────────────────────────────────
 
-function ToolOptions({ tool, color, size, selectedId, onColorChange, onSizeChange, onDeleteSelected, onOpenSignModal }: {
+function ToolOptions({ tool, color, size, selectedId, onColorChange, onSizeChange, onDeleteSelected, onOpenSignModal,
+  fontFamily, fontSize, fontColor, isBold, isItalic, isUnderline, bgColor, bgTransparent,
+  onFontFamilyChange, onFontSizeChange, onFontColorChange,
+  onBoldToggle, onItalicToggle, onUnderlineToggle,
+  onBgColorChange, onBgTransparentToggle,
+}: {
   tool: ToolAction; color: string; size: number; selectedId?: string | null;
   onColorChange: (c: string) => void; onSizeChange: (s: number) => void;
   onDeleteSelected?: () => void; onOpenSignModal?: () => void;
+  fontFamily: string; fontSize: number; fontColor: string;
+  isBold: boolean; isItalic: boolean; isUnderline: boolean;
+  bgColor: string; bgTransparent: boolean;
+  onFontFamilyChange: (f: string) => void; onFontSizeChange: (s: number) => void;
+  onFontColorChange: (c: string) => void;
+  onBoldToggle: () => void; onItalicToggle: () => void; onUnderlineToggle: () => void;
+  onBgColorChange: (c: string) => void; onBgTransparentToggle: () => void;
 }) {
   const COLORS = ["#000000","#EF4444","#3B82F6","#22C55E","#F59E0B","#8B5CF6","#EC4899","#FFFFFF"];
   const HL_COLORS = ["#FDE047","#86EFAC","#93C5FD","#F9A8D4","#FCA5A5","#C4B5FD"];
   const SIZES = [1, 2, 4, 6, 10, 16];
 
-  const isDrawable  = ["draw", "shapes"].includes(tool);
+  const isDrawable  = ["draw", "shapes", "ellipse", "triangle", "diamond", "line", "arrow", "underline", "strikethrough"].includes(tool);
   const isHighlight = tool === "highlight";
+  const isTextTool  = tool === "add-text" || tool === "text-edit";
+
+  if (isTextTool) {
+    return (
+      <FontPanel
+        fontFamily={fontFamily} fontSize={fontSize} fontColor={fontColor}
+        isBold={isBold} isItalic={isItalic} isUnderline={isUnderline}
+        bgColor={bgColor} bgTransparent={bgTransparent}
+        onFontFamilyChange={onFontFamilyChange} onFontSizeChange={onFontSizeChange}
+        onFontColorChange={onFontColorChange}
+        onBoldToggle={onBoldToggle} onItalicToggle={onItalicToggle} onUnderlineToggle={onUnderlineToggle}
+        onBgColorChange={onBgColorChange} onBgTransparentToggle={onBgTransparentToggle}
+      />
+    );
+  }
 
   return (
     <div className="space-y-4 text-xs">
@@ -882,20 +1058,6 @@ function ToolOptions({ tool, color, size, selectedId, onColorChange, onSizeChang
         </div>
       )}
 
-      {tool === "add-text" && (
-        <div className="space-y-2">
-          <p className="font-semibold uppercase tracking-wider text-muted-foreground">Text Color</p>
-          <div className="flex flex-wrap gap-1.5">
-            {COLORS.map(c => (
-              <button key={c} onClick={() => onColorChange(c)}
-                className={cn("h-6 w-6 rounded-full border-2 transition-all hover:scale-110",
-                  color === c ? "scale-125 border-foreground" : "border-transparent shadow-sm")}
-                style={{ backgroundColor: c }} />
-            ))}
-          </div>
-        </div>
-      )}
-
       {(isDrawable || tool === "eraser") && (
         <div className="space-y-2">
           <p className="font-semibold uppercase tracking-wider text-muted-foreground">Size — {size}px</p>
@@ -912,26 +1074,12 @@ function ToolOptions({ tool, color, size, selectedId, onColorChange, onSizeChang
         </div>
       )}
 
-      {tool === "add-text" && (
-        <div className="rounded-lg border bg-muted/40 p-2.5 text-muted-foreground leading-relaxed">
-          Click on the document where you want to add text. Press <span className="inline-flex items-center rounded border border-border bg-background px-1.5 py-0.5 font-mono text-[10px] font-medium shadow-sm">Esc</span> to confirm.
-        </div>
-      )}
-
-      {tool === "text-edit" && (
-        <div className="rounded-lg border bg-blue-50 p-2.5 text-muted-foreground leading-relaxed space-y-1.5">
-          <p className="font-medium text-blue-800 text-[11px]">✏️ Editar texto del PDF</p>
-          <p className="text-[10px] leading-relaxed">Pasa el cursor sobre el texto existente para ver los elementos. Haz <strong>clic</strong> en cualquier texto para editarlo.</p>
-          <p className="text-[10px] text-muted-foreground">Pulsa <span className="inline-flex items-center rounded border bg-background px-1 py-0.5 font-mono text-[9px] shadow-sm">Enter</span> o <span className="inline-flex items-center rounded border bg-background px-1 py-0.5 font-mono text-[9px] shadow-sm">Esc</span> para confirmar.</p>
-        </div>
-      )}
-
       {tool === "sign" && (
         <div className="space-y-2">
           <p className="text-muted-foreground">Create your signature and place it anywhere on the document.</p>
           <button onClick={onOpenSignModal}
             className="w-full rounded-lg border-2 border-primary bg-primary/5 py-2 text-xs font-medium text-primary hover:bg-primary/10 transition-colors">
-            ✏️ Create signature
+            Create signature
           </button>
         </div>
       )}
@@ -952,12 +1100,12 @@ function ToolOptions({ tool, color, size, selectedId, onColorChange, onSizeChang
               </div>
               <button onClick={onDeleteSelected}
                 className="flex w-full items-center justify-center gap-1.5 rounded border border-destructive/40 bg-destructive/5 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors">
-                🗑 Delete selected
+                Delete selected
               </button>
             </>
           ) : (
             <div className="rounded-lg border bg-muted/40 p-2.5 text-xs text-muted-foreground leading-relaxed">
-              Click any element to select it. Then drag to move it or grab the blue circle handle to rotate it.
+              Select a tool to get started.
             </div>
           )}
         </div>
@@ -965,12 +1113,12 @@ function ToolOptions({ tool, color, size, selectedId, onColorChange, onSizeChang
 
       {tool === "rotate" && (
         <div className="rounded-lg border bg-blue-50 p-2.5 text-xs text-blue-800 dark:bg-blue-900/20 dark:text-blue-300 leading-relaxed">
-          Click the Rotate Page button to rotate 90° clockwise. Click again to keep rotating.
+          Click the Rotate Page button to rotate 90° clockwise.
         </div>
       )}
       {tool === "delete-page" && (
         <div className="rounded-lg border bg-red-50 p-2.5 text-xs text-red-700 dark:bg-red-900/20 dark:text-red-300 leading-relaxed">
-          Deletes the current page from the editor. You can restore it by clicking "Restore page" in the canvas.
+          Deletes the current page from the editor. You can restore it from the canvas.
         </div>
       )}
       {tool === "eraser" && (

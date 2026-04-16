@@ -885,6 +885,7 @@ export default function PdfViewer({
           {extractedItems.map(item => {
             const committedEdit = textEdits.find(e => e.id === item.id);
             const isEditing = editingItemId === item.id;
+            const HANDLE = 6;
 
             return (
               <div
@@ -898,27 +899,45 @@ export default function PdfViewer({
                 }}
               >
                 {isEditing ? (
-                  <TextItemEditor
-                    item={item}
-                    initialValue={committedEdit?.newText ?? item.str}
-                    onCommit={newText => {
-                      setEditingItemId(null);
-                      onTextEditCommit?.({
-                        id: item.id,
-                        page: item.page,
-                        originalText: item.str,
-                        newText,
-                        pdfX: item.pdfX,
-                        pdfY: item.pdfY,
-                        pdfFontSize: item.pdfFontSize,
-                        pdfWidth: item.pdfWidth,
-                        fontFamily: item.fontFamily,
-                        fontWeight: item.fontWeight,
-                        fontStyle: item.fontStyle,
-                        color: item.color,
-                      });
-                    }}
-                  />
+                  <>
+                    <TextItemEditor
+                      item={item as PdfTextItem & { _fauxBold?: boolean }}
+                      initialValue={committedEdit?.newText ?? item.str}
+                      onCommit={newText => {
+                        setEditingItemId(null);
+                        onTextEditCommit?.({
+                          id: item.id,
+                          page: item.page,
+                          originalText: item.str,
+                          newText,
+                          pdfX: item.pdfX,
+                          pdfY: item.pdfY,
+                          pdfFontSize: item.pdfFontSize,
+                          pdfWidth: item.pdfWidth,
+                          fontFamily: item.fontFamily,
+                          fontWeight: item.fontWeight,
+                          fontStyle: item.fontStyle,
+                          color: item.color,
+                        });
+                      }}
+                    />
+                    {/* Blue selection handles around active text block */}
+                    {[
+                      { left: -HANDLE / 2, top: -HANDLE / 2 },
+                      { right: -HANDLE / 2, top: -HANDLE / 2 },
+                      { left: -HANDLE / 2, bottom: -HANDLE / 2 },
+                      { right: -HANDLE / 2, bottom: -HANDLE / 2 },
+                      { left: "calc(50% - 3px)", top: -HANDLE / 2 },
+                      { left: "calc(50% - 3px)", bottom: -HANDLE / 2 },
+                    ].map((pos, i) => (
+                      <div key={i} style={{
+                        position: "absolute", ...pos,
+                        width: HANDLE, height: HANDLE,
+                        background: "#3b82f6", border: "1px solid white",
+                        borderRadius: 1, zIndex: 65, pointerEvents: "none",
+                      }} />
+                    ))}
+                  </>
                 ) : committedEdit ? (
                   <div
                     title="Haz clic para editar"
@@ -936,7 +955,7 @@ export default function PdfViewer({
                       alignItems: "center",
                       cursor: "text",
                       userSelect: "none",
-                      borderBottom: "2px solid #22c55e",
+                      border: "1px dashed #22c55e",
                       paddingLeft: 2,
                       overflow: "hidden",
                       whiteSpace: "nowrap",
@@ -952,11 +971,25 @@ export default function PdfViewer({
                     {committedEdit.newText}
                   </div>
                 ) : (
-                  /* Transparent hover target over original text */
+                  /* Dashed blue border on ALL text blocks — like the reference editor */
                   <div
                     title={`"${item.str.length > 40 ? item.str.slice(0, 40) + "…" : item.str}" — clic para editar`}
-                    className="hover:bg-blue-200/25 hover:ring-1 hover:ring-blue-400/60 rounded-[1px] transition-colors"
-                    style={{ width: "100%", height: "100%", cursor: "text" }}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      cursor: "text",
+                      border: "1px dashed rgba(59, 130, 246, 0.5)",
+                      borderRadius: 1,
+                      transition: "background 0.15s, border-color 0.15s",
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.background = "rgba(59, 130, 246, 0.08)";
+                      e.currentTarget.style.borderColor = "rgba(59, 130, 246, 0.8)";
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.background = "transparent";
+                      e.currentTarget.style.borderColor = "rgba(59, 130, 246, 0.5)";
+                    }}
                     onClick={() => setEditingItemId(item.id)}
                     onMouseDown={e => e.stopPropagation()}
                     onMouseMove={e => e.stopPropagation()}
