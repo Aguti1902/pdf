@@ -345,13 +345,18 @@ export function EditorLayout() {
     }
     if (tool === "add-text") {
       const id = crypto.randomUUID();
-      setTextBoxes(prev => [...prev, { id, x, y, value: "", color: fontColor, placeholder: "Type here...", page: currentPageRef.current }]);
+      setTextBoxes(prev => [...prev, {
+        id, x, y, value: "", color: fontColor,
+        placeholder: "Type here...", page: currentPageRef.current,
+        fontFamily, fontSize, fontWeight: isBold ? "bold" : "normal",
+        fontStyle: isItalic ? "italic" : "normal",
+        textDecoration: isUnderlineFp ? "underline" : "none",
+      }]);
       setActiveTextBoxId(id);
       setSelectedTextBoxId(null);
-      setActiveTool("pointer");
     }
     if (tool === "add-image") { pendingImagePos.current = { x, y }; imageInputRef.current?.click(); }
-  }, [editorState.activeTool, toolColor, toolSize, fontColor, annotations, setActiveTool]);
+  }, [editorState.activeTool, toolColor, toolSize, fontColor, fontFamily, fontSize, isBold, isItalic, isUnderlineFp, annotations, setActiveTool]);
 
   const handleMouseMove = useCallback((x: number, y: number) => {
     if (!isMouseDown.current && !isRotatingRef.current) return;
@@ -491,13 +496,49 @@ export function EditorLayout() {
     setActiveTextBoxId(prev  => prev  === id ? null : prev);
     setSelectedTextBoxId(prev => prev === id ? null : prev);
   }, []);
-  const handleTextBoxSelect   = useCallback((id: string) => setSelectedTextBoxId(id), []);
+  const handleTextBoxSelect   = useCallback((id: string) => {
+    setSelectedTextBoxId(id);
+    const tb = textBoxes.find(t => t.id === id);
+    if (tb) {
+      if (tb.fontFamily)    setFontFamily(tb.fontFamily);
+      if (tb.fontSize)      setFontSize(tb.fontSize);
+      if (tb.color)         setFontColor(tb.color);
+      setIsBold(tb.fontWeight === "bold");
+      setIsItalic(tb.fontStyle === "italic");
+      setIsUnderlineFp(tb.textDecoration === "underline");
+    }
+  }, [textBoxes]);
   const handleTextBoxMove     = useCallback((id: string, x: number, y: number) =>
     setTextBoxes(p => p.map(tb => tb.id === id ? { ...tb, x, y } : tb)), []);
   const handleTextBoxActivate = useCallback((id: string) => {
     setActiveTextBoxId(id);
     setSelectedTextBoxId(null);
-  }, []);
+    const tb = textBoxes.find(t => t.id === id);
+    if (tb) {
+      if (tb.fontFamily)    setFontFamily(tb.fontFamily);
+      if (tb.fontSize)      setFontSize(tb.fontSize);
+      if (tb.color)         setFontColor(tb.color);
+      setIsBold(tb.fontWeight === "bold");
+      setIsItalic(tb.fontStyle === "italic");
+      setIsUnderlineFp(tb.textDecoration === "underline");
+    }
+  }, [textBoxes]);
+
+  // ── Sync Font panel → active/selected text box in real time ──────────────
+  useEffect(() => {
+    const targetId = activeTextBoxId ?? selectedTextBoxId;
+    if (!targetId) return;
+    setTextBoxes(prev => prev.map(tb => tb.id !== targetId ? tb : {
+      ...tb,
+      color: fontColor,
+      fontFamily,
+      fontSize,
+      fontWeight: isBold ? "bold" : "normal",
+      fontStyle: isItalic ? "italic" : "normal",
+      textDecoration: isUnderlineFp ? "underline" : "none",
+    }));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fontFamily, fontSize, fontColor, isBold, isItalic, isUnderlineFp]);
 
   // ── Native text edit handlers ──────────────────────────────────────────────
   const handleTextEditCommit = useCallback((edit: TextEdit) => {
@@ -767,6 +808,15 @@ export function EditorLayout() {
                   textEdits={textEdits.filter(e => e.page === editorState.currentPage)}
                   onTextEditCommit={handleTextEditCommit}
                   onTextEditDelete={handleTextEditDelete}
+                  onTextItemSelect={(item) => {
+                    const familyMatch = item.fontFamily.match(/"([^"]+)"/);
+                    if (familyMatch) setFontFamily(familyMatch[1]);
+                    setFontSize(Math.round(item.pdfFontSize));
+                    setFontColor(item.color);
+                    setIsBold(item.fontWeight === "bold");
+                    setIsItalic(item.fontStyle === "italic");
+                    setIsUnderlineFp(false);
+                  }}
                 />
               </div>
             ) : (

@@ -40,6 +40,12 @@ export interface ExportTextBox {
   color: string;
   rotation?: number;
   page?: number;
+  fontFamily?: string;
+  fontSize?: number;
+  fontWeight?: "normal" | "bold";
+  fontStyle?: "normal" | "italic";
+  textDecoration?: "none" | "underline";
+  textAlign?: "left" | "center" | "right" | "justify";
 }
 
 /** A native-text edit to apply during export */
@@ -221,10 +227,18 @@ function drawTextBoxesOnCtx(
   for (const tb of boxes) {
     if (!tb.value?.trim()) continue;
     ctx.save();
-    const fontSize = 14 * scale;
-    ctx.font = `${fontSize}px Inter, Arial, sans-serif`;
+    const fs = (tb.fontSize ?? 14) * scale;
+    const family = tb.fontFamily ?? "Inter, Arial, sans-serif";
+    const weight = tb.fontWeight ?? "normal";
+    const style  = tb.fontStyle  ?? "normal";
+    const parts: string[] = [];
+    if (style === "italic") parts.push("italic");
+    if (weight === "bold") parts.push("bold");
+    parts.push(`${fs}px`);
+    parts.push(family);
+    ctx.font = parts.join(" ");
     ctx.fillStyle = tb.color || "#000000";
-    const lineHeight = 18 * scale;
+    const lineHeight = fs * 1.3;
     const lines = tb.value.split("\n");
     if (tb.rotation) {
       const cx = tb.x * scale, cy = tb.y * scale;
@@ -233,8 +247,21 @@ function drawTextBoxesOnCtx(
       ctx.translate(-cx, -cy);
     }
     lines.forEach((line, i) => {
-      ctx.fillText(line, tb.x * scale, (tb.y + 14 + i * 18) * scale);
+      ctx.fillText(line, tb.x * scale, (tb.y * scale) + fs + i * lineHeight);
     });
+    // Underline decoration
+    if (tb.textDecoration === "underline") {
+      ctx.strokeStyle = tb.color || "#000000";
+      ctx.lineWidth = Math.max(1, fs * 0.06);
+      lines.forEach((line, i) => {
+        const w = ctx.measureText(line).width;
+        const yLine = (tb.y * scale) + fs + i * lineHeight + fs * 0.1;
+        ctx.beginPath();
+        ctx.moveTo(tb.x * scale, yLine);
+        ctx.lineTo(tb.x * scale + w, yLine);
+        ctx.stroke();
+      });
+    }
     ctx.restore();
   }
 }

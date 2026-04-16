@@ -16,7 +16,14 @@ export type Annotation      = DrawAnnotation | RectAnnotation | ImageAnnotation 
 export interface LiveRect { x: number; y: number; w: number; h: number; color: string; type: "highlight" | "shape" | "ellipse" | "triangle" | "diamond" | "underline" | "strikethrough"; size: number; }
 export interface LiveLine { x1: number; y1: number; x2: number; y2: number; color: string; size: number; type: "line" | "arrow"; }
 
-export interface TextBox { id: string; x: number; y: number; value: string; color: string; placeholder?: string; rotation?: number; page?: number; }
+export interface TextBox {
+  id: string; x: number; y: number; value: string; color: string;
+  placeholder?: string; rotation?: number; page?: number;
+  fontFamily?: string; fontSize?: number;
+  fontWeight?: "normal" | "bold"; fontStyle?: "normal" | "italic";
+  textDecoration?: "none" | "underline";
+  textAlign?: "left" | "center" | "right" | "justify";
+}
 
 // ─── Native PDF text editing ──────────────────────────────────────────────────
 
@@ -89,6 +96,7 @@ export interface PdfViewerProps {
   textEdits?: TextEdit[];
   onTextEditCommit?: (edit: TextEdit) => void;
   onTextEditDelete?: (editId: string) => void;
+  onTextItemSelect?: (item: PdfTextItem) => void;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -267,8 +275,18 @@ function PlacedTextBox({ tb, isSelected, onSelectTb, onMoveTb, onActivateTb, onD
       onMouseUp={e => e.stopPropagation()}
       onMouseMove={e => e.stopPropagation()}
     >
-      <div className={`min-w-[60px] rounded px-1 py-0.5 text-sm whitespace-pre-wrap font-medium leading-snug transition-shadow
-        ${isSelected ? "ring-2 ring-primary ring-offset-1 shadow-sm" : "hover:ring-1 hover:ring-primary/40"}`}>
+      <div
+        className={`min-w-[60px] rounded px-1 py-0.5 whitespace-pre-wrap leading-snug transition-shadow
+          ${isSelected ? "ring-2 ring-primary ring-offset-1 shadow-sm" : "hover:ring-1 hover:ring-primary/40"}`}
+        style={{
+          fontFamily: tb.fontFamily ?? "Inter, Arial, sans-serif",
+          fontSize: `${tb.fontSize ?? 14}px`,
+          fontWeight: tb.fontWeight ?? "normal",
+          fontStyle: tb.fontStyle ?? "normal",
+          textDecoration: tb.textDecoration ?? "none",
+          textAlign: tb.textAlign ?? "left",
+        }}
+      >
         {tb.value}
       </div>
       {isSelected && (
@@ -276,7 +294,7 @@ function PlacedTextBox({ tb, isSelected, onSelectTb, onMoveTb, onActivateTb, onD
           className="absolute -top-2.5 -right-2.5 z-30 h-5 w-5 rounded-full bg-destructive text-white text-[11px] font-bold flex items-center justify-center shadow hover:scale-110 transition-transform"
           onMouseDown={e => e.stopPropagation()}
           onClick={(e) => { e.stopPropagation(); onDeleteTb?.(tb.id); }}
-        >×</button>
+        >x</button>
       )}
     </div>
   );
@@ -330,7 +348,6 @@ function TextBoxEditor({ tb, onBlur, onDelete }: TextBoxEditorProps) {
         top: tb.y,
         transform: tb.rotation ? `rotate(${tb.rotation}deg)` : undefined,
       }}
-      // Stop pointer events from reaching the annotation canvas below
       onMouseDown={e => e.stopPropagation()}
       onMouseUp={e => e.stopPropagation()}
       onMouseMove={e => e.stopPropagation()}
@@ -339,8 +356,17 @@ function TextBoxEditor({ tb, onBlur, onDelete }: TextBoxEditorProps) {
         ref={ref}
         rows={2}
         defaultValue={tb.value}
-        className="min-w-[180px] resize rounded border-2 border-primary bg-white/97 px-2.5 py-1.5 text-sm shadow-xl outline-none focus:ring-2 focus:ring-primary/40 dark:bg-neutral-900/97"
-        style={{ color: tb.color, caretColor: tb.color }}
+        className="min-w-[180px] resize rounded border-2 border-primary bg-white/97 px-2.5 py-1.5 shadow-xl outline-none focus:ring-2 focus:ring-primary/40 dark:bg-neutral-900/97"
+        style={{
+          color: tb.color,
+          caretColor: tb.color,
+          fontFamily: tb.fontFamily ?? "Inter, Arial, sans-serif",
+          fontSize: `${tb.fontSize ?? 14}px`,
+          fontWeight: tb.fontWeight ?? "normal",
+          fontStyle: tb.fontStyle ?? "normal",
+          textDecoration: tb.textDecoration ?? "none",
+          textAlign: tb.textAlign ?? "left",
+        }}
         placeholder={tb.placeholder ?? "Type here..."}
         onKeyDown={handleKeyDown}
         onBlur={handleBlur}
@@ -358,7 +384,7 @@ export default function PdfViewer({
   onPdfLoaded, onMouseDown, onMouseMove, onMouseUp,
   onTextBoxBlur, onTextBoxDelete, onTextBoxSelect, onTextBoxMove, onTextBoxActivate,
   onRotateStart,
-  tool, textEdits = [], onTextEditCommit, onTextEditDelete,
+  tool, textEdits = [], onTextEditCommit, onTextEditDelete, onTextItemSelect,
 }: PdfViewerProps) {
   const pdfCanvasRef = useRef<HTMLCanvasElement>(null);
   const annCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -963,7 +989,7 @@ export default function PdfViewer({
                         ? { WebkitTextStroke: `${Math.max(0.4, item.screenFontSize * 0.02)}px ${item.color}` }
                         : {}),
                     }}
-                    onClick={() => setEditingItemId(item.id)}
+                    onClick={() => { setEditingItemId(item.id); onTextItemSelect?.(item); }}
                     onMouseDown={e => e.stopPropagation()}
                     onMouseMove={e => e.stopPropagation()}
                     onMouseUp={e => e.stopPropagation()}
@@ -990,7 +1016,7 @@ export default function PdfViewer({
                       e.currentTarget.style.background = "transparent";
                       e.currentTarget.style.borderColor = "rgba(59, 130, 246, 0.5)";
                     }}
-                    onClick={() => setEditingItemId(item.id)}
+                    onClick={() => { setEditingItemId(item.id); onTextItemSelect?.(item); }}
                     onMouseDown={e => e.stopPropagation()}
                     onMouseMove={e => e.stopPropagation()}
                     onMouseUp={e => e.stopPropagation()}
